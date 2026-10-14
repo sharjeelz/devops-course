@@ -76,8 +76,13 @@ pods a little slower, and give up node-level features such as DaemonSets and pri
 
 ## Clean up
 
-This is the end of the expensive part. In `app/linkly/terraform/envs/eks`: `terraform destroy`
-(about 10–15 minutes). Then check the EC2 → Load Balancers page: a load balancer created by
-Kubernetes is deleted when its Service is. If you destroyed the cluster first, delete any leftover
-one by hand. (Uninstalling Linkly's Gateway, `kubectl delete -f app/linkly/gitops/application-eks.yaml`,
-before `destroy` avoids that.)
+This is the end of the expensive part:
+
+```bash
+AWS_REGION=<your region> app/linkly/eks/teardown.sh
+```
+
+It deletes Linkly's Argo CD Application (its finalizer removes the Gateway, and with it the load
+balancer Kubernetes created), waits until no LoadBalancer Service is left, runs `terraform destroy`
+(about 10–15 minutes; type yes), and finally lists anything tagged for the cluster that's still in
+AWS. If it lists something, delete it in the EC2 console: it may still be billing.

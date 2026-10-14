@@ -49,8 +49,13 @@ kubectl -n envoy-gateway-system get svc -l gateway.envoyproxy.io/owning-gateway-
   -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}'; echo
 ```
 
-That last name is the load balancer. Until lesson 5 gives it a certificate, try it with
-`curl -k https://<that name>/` (`-k`: accept the certificate even though it isn't valid yet).
+That last name is the load balancer. Linkly isn't reachable by it yet: the Gateway only answers
+for your domain, and the certificate needs DNS (lesson 5). You can check the routing already, by
+telling the load balancer which name you mean:
+
+```bash
+curl -sI -H 'Host: linkly.<your domain>' http://<that name>/ | head -3    # 301 to https://linkly.<your domain>/
+```
 
 ## Lab
 

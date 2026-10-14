@@ -19,8 +19,11 @@ AWS keys**.
 > | **Total** | **about $0.25 per hour, about $6 a day** |
 >
 > So: **rehearse everything for free first (lesson 1)**, then do lessons 2–6 in one or two
-> sittings, and `terraform destroy` at the end of each. A day of forgetting costs ~$6; a month,
-> ~$180. Your Module 6 budget alert will email you, but don't rely on it. Prices vary a little by
+> sittings, and tear down at the end of each with `AWS_REGION=<region> app/linkly/eks/teardown.sh`.
+> (Not plain `terraform destroy`: Kubernetes made Linkly's load balancer, so Terraform can't
+> remove it, and it would block deleting the VPC while it keeps billing. The script removes it first.)
+>
+> A day of forgetting costs ~$6; a month, ~$180. Your Module 6 budget alert will email you, but don't rely on it. Prices vary a little by
 > region; check the [EKS](https://aws.amazon.com/eks/pricing/) and
 > [RDS](https://aws.amazon.com/rds/postgresql/pricing/) pricing pages.
 

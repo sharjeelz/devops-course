@@ -38,6 +38,11 @@ run "can_read_and_plan_but_not_change" {
     condition     = contains(flatten([for s in jsondecode(aws_iam_role_policy.state.policy).Statement : s.Action]), "s3:DeleteObject")
     error_message = "plan takes and releases a lock file: it must be able to delete it"
   }
+  assert {
+    condition = alltrue([for s in jsondecode(aws_iam_role_policy.state.policy).Statement :
+    alltrue([for r in flatten([s.Resource]) : endswith(r, ".tflock")]) if length(setintersection(toset(flatten([s.Action])), toset(["s3:PutObject", "s3:DeleteObject"]))) > 0])
+    error_message = "it may write and delete only lock files, never the state itself"
+  }
 }
 
 run "refuses_a_wildcard_repository" {

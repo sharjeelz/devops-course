@@ -128,6 +128,8 @@ jobs:
           echo "86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb  helm.tar.gz" | sha256sum -c -
           tar xzf helm.tar.gz linux-amd64/helm
           sudo install -m 0755 linux-amd64/helm /usr/local/bin/helm && rm -r linux-amd64 helm.tar.gz
+      - name: Teardown order (fake kubectl, terraform and aws)
+        run: app/linkly/eks/test-teardown.sh
       - name: Rehearse the EKS setup on kind (External Secrets, cert-manager, HPA, password rotation)
         run: app/linkly/eks/rehearse-on-kind.sh
 
@@ -135,7 +137,7 @@ jobs:
   # Runs only once you've set the repository variables; until then it's skipped.
   terraform-plan:
     needs: terraform
-    if: vars.AWS_PLAN_ROLE_ARN != ''
+    if: vars.AWS_PLAN_ROLE_ARN != '' && github.ref_type != 'tag'   # the role trusts main and PRs, not tags
     runs-on: ubuntu-24.04
     permissions:
       contents: read

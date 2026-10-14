@@ -40,7 +40,9 @@ resource "aws_iam_role_policy" "state" {
     Version = "2012-10-17"
     Statement = [
       { Effect = "Allow", Action = "s3:ListBucket", Resource = var.state_bucket_arn },
-      { Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], Resource = "${var.state_bucket_arn}/*" },
+      { Effect = "Allow", Action = "s3:GetObject", Resource = "${var.state_bucket_arn}/*" },
+      # Only the lock files (<key>.tflock): a plan never writes state, so the role can't overwrite it.
+      { Effect = "Allow", Action = ["s3:PutObject", "s3:DeleteObject"], Resource = "${var.state_bucket_arn}/*.tflock" },
     ]
   })
 }

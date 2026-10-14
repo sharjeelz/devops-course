@@ -75,5 +75,6 @@ few. The add-ons alone take several pods per node, so a t3.small fills up before
 
 ## Clean up
 
-If you stop here: `terraform destroy` (about 10 minutes). Otherwise keep it for lessons 3–6, and
-destroy at the end of your sitting.
+If you stop here: `terraform destroy` (about 10 minutes; nothing made by Kubernetes exists yet).
+Otherwise keep it for lessons 3–6. From lesson 4 on, always tear down with
+`AWS_REGION=<region> app/linkly/eks/teardown.sh`, which removes Kubernetes' load balancer first.
