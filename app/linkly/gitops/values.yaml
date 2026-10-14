@@ -5,4 +5,4 @@
 # The database keeps the chart's local default password: fine for kind, never for real (module 8).
 image:
   prefix: ghcr.io/sharjeelz/
-  tag: sha-85779b4
+  tag: sha-753b709
