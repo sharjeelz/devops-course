@@ -40,5 +40,18 @@ The tests need no database: they use an in-memory store and a fake Redis. Set
 
 ## Running it
 
-To run it by hand on Linux, see [Module 0, lesson 4](../../modules/00-foundations/04-run-linkly-by-hand.md).
-Module 1 turns all of that into one command.
+With Docker (Module 1 onwards), from this folder:
+
+```bash
+docker compose up -d --build --wait      # build and start all five parts, wait until healthy
+# open http://localhost:8080             # LINKLY_PORT=9090 docker compose up ... if 8080 is taken
+docker compose logs -f worker            # watch clicks being counted
+docker compose down                      # stop (data kept in the pgdata volume)
+docker compose down -v                   # stop and delete the data
+```
+
+`./smoke-test.sh` builds, starts, exercises and removes a throwaway copy of the stack.
+
+Each Python image also has a `test` stage: `docker build --target test -t linkly-api:test api && docker run --rm linkly-api:test`.
+
+By hand on Linux (Module 0): see [Module 0, lesson 4](../../modules/00-foundations/04-run-linkly-by-hand.md).

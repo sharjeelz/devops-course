@@ -28,7 +28,8 @@ echo "== shorten, redirect, count"
 body=$(curl -fsS -X POST "$base/api/links" -H 'content-type: application/json' -d '{"url":"https://example.com/smoke"}') || fail "shorten failed"
 code=$(echo "$body" | sed -E 's/.*"code":"([^"]+)".*/\1/')
 [ ${#code} -eq 7 ] || fail "no code in: $body"
-read -r status target < <(curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "$base/r/$code")
+# tr: curl on Windows (Git Bash) ends -w output with \r\n
+read -r status target < <(curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "$base/r/$code" | tr -d '\r')
 [ "$status" = "307" ] && [ "$target" = "https://example.com/smoke" ] || fail "redirect gave $status $target"
 curl -s -o /dev/null "$base/r/$code"
 clicks=0
