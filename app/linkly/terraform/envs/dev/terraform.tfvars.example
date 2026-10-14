@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars (git ignores it) and fill in your own values.
+region         = "eu-central-1"
+allowed_cidr   = "203.0.113.10/32"            # your address: curl -s https://checkip.amazonaws.com
+ssh_public_key = "ssh-ed25519 AAAA... you@laptop" # cat ~/.ssh/id_ed25519.pub
+linkly_images  = "ghcr.io/<you>"
+linkly_tag     = "sha-abc1234"                # a build from your GHCR packages page

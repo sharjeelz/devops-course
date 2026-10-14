@@ -25,6 +25,17 @@ jobs:
           version: "0.17.0"
           src: app/linkly
 
+  terraform:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.16.6"
+          terraform_wrapper: false
+      - name: Format, validate and test Linkly's Terraform (mock AWS, no credentials)
+        run: tools/check-terraform.sh
+
   test:
     runs-on: ubuntu-24.04
     strategy:

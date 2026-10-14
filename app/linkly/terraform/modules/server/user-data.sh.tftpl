@@ -1,0 +1,27 @@
+#!/bin/bash
+# Runs once, as root, when the instance first boots (cloud-init). Rendered by Terraform (module 7):
+# Module 6, lesson 4's manual steps, done by the machine itself.
+set -euo pipefail
+exec > >(tee /var/log/linkly-setup.log) 2>&1
+
+mkdir -p /opt/linkly
+cat > /opt/linkly/install-docker.sh <<'LINKLY_FILE'
+${install_docker}
+LINKLY_FILE
+cat > /opt/linkly/compose.yaml <<'LINKLY_FILE'
+${compose}
+LINKLY_FILE
+cat > /opt/linkly/compose.ghcr.yaml <<'LINKLY_FILE'
+${compose_ghcr}
+LINKLY_FILE
+
+bash /opt/linkly/install-docker.sh
+
+# This instance's public address, from the metadata service (IMDSv2: a token first).
+token=$(curl -sS -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 300')
+public_ip=$(curl -sS -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
+
+cd /opt/linkly
+export LINKLY_IMAGES='${linkly_images}' LINKLY_TAG='${linkly_tag}' LINKLY_BASE_URL="http://$public_ip:8080"
+docker compose -f compose.yaml -f compose.ghcr.yaml up -d --wait
+echo "Linkly is up at $LINKLY_BASE_URL"
