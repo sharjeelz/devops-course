@@ -29,7 +29,7 @@ def create_app(store: LinkStore, cache: redis.Redis, base_url: str) -> FastAPI:
 
     @app.get("/healthz")
     def healthz():
-        return {"status": "ok"}
+        return {"status": "ok", "version": os.environ.get("LINKLY_VERSION", "dev")}
 
     @app.post("/api/links", status_code=201)
     def shorten(body: NewLink):

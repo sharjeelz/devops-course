@@ -70,6 +70,8 @@ def test_redirect_survives_redis_down(env):
     assert res.headers["location"].startswith("https://example.com")
 
 
-def test_healthz(env):
+def test_healthz_reports_the_version(env, monkeypatch):
     client, _, _ = env
-    assert client.get("/healthz").json() == {"status": "ok"}
+    assert client.get("/healthz").json() == {"status": "ok", "version": "dev"}
+    monkeypatch.setenv("LINKLY_VERSION", "0.2.0")
+    assert client.get("/healthz").json() == {"status": "ok", "version": "0.2.0"}

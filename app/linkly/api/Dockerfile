@@ -22,6 +22,9 @@ FROM base AS runtime
 COPY --from=deps /install /usr/local
 COPY linkly_api ./linkly_api
 RUN useradd --system --uid 10001 --no-create-home linkly
+# The version this image was built from (CI passes the release tag); /healthz reports it.
+ARG VERSION=dev
+ENV LINKLY_VERSION=$VERSION
 USER linkly
 EXPOSE 8000
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=5 \
