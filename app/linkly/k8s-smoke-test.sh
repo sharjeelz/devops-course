@@ -14,15 +14,17 @@ k() { kubectl --context "kind-${cluster}" -n linkly "$@"; }
 created=0
 
 fail() { echo "K8S SMOKE TEST FAILED: $*" >&2; k get pods -o wide >&2 || true; k get events --sort-by=.lastTimestamp 2>/dev/null | tail -15 >&2 || true; exit 1; }
-cleanup() { [ "$created" = 1 ] && kind delete cluster --name "$cluster" >/dev/null 2>&1; rm -f "$cfg"; }
-cfg=$(mktemp)
+# All scratch files live in one private directory (mktemp -d: created atomically, only we can write to it).
+tmp=$(mktemp -d)
+cfg="$tmp/kind-config.yaml"
+cleanup() { [ "$created" = 1 ] && kind delete cluster --name "$cluster" >/dev/null 2>&1; rm -rf "$tmp"; }
 trap cleanup EXIT
 
 echo "== cluster"
 sed "s/hostPort: 8080/hostPort: ${LINKLY_PORT}/" kind-config.yaml > "$cfg"
 if kind get clusters 2>/dev/null | grep -qx "$cluster"; then echo "A cluster named $cluster already exists; delete it or set CLUSTER." >&2; exit 2; fi
-kind create cluster --name "$cluster" --config "$cfg" --wait 120s >/dev/null 2>"$cfg.err" || { cat "$cfg.err" >&2; rm -f "$cfg.err"; fail "kind could not create the cluster (port ${LINKLY_PORT} taken? set LINKLY_PORT)"; }
-rm -f "$cfg.err"; created=1
+kind create cluster --name "$cluster" --config "$cfg" --wait 120s >/dev/null 2>"$tmp/kind.err" || { cat "$tmp/kind.err" >&2; fail "kind could not create the cluster (port ${LINKLY_PORT} taken? set LINKLY_PORT)"; }
+created=1
 
 echo "== images"
 for svc in api worker web; do
@@ -68,14 +70,13 @@ k rollout status deployment/api --timeout=120s >/dev/null || fail "api not back 
 [ "$(k get deploy api -o jsonpath='{.status.readyReplicas}')" = "2" ] || fail "api replicas not restored"
 
 echo "== a rolling restart of the api drops no requests"
-results=$(mktemp); running=$(mktemp)
+results="$tmp/results"; running="$tmp/running"; : > "$results"; : > "$running"
 ( while [ -f "$running" ]; do curl -s -o /dev/null -m 5 -w '%{http_code}\n' "$base/r/$code" >> "$results"; done ) &
 k rollout restart deployment/api >/dev/null
 k rollout status deployment/api --timeout=180s >/dev/null || fail "rolling restart did not finish"
 sleep 2; rm -f "$running"; wait
 total=$(grep -c . "$results"); bad=$(tr -d '\r' < "$results" | grep -vc '^307$' || true)
 tr -d '\r' < "$results" | grep -v '^307$' | sort | uniq -c | sed 's/^/   got /' >&2 || true
-rm -f "$results"
 [ "$total" -ge 20 ] || fail "only $total requests were sent during the restart"
 [ "$bad" -eq 0 ] || fail "$bad of $total requests failed during the rolling restart"
 echo "   $total requests, none failed"
