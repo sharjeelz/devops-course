@@ -3,7 +3,8 @@
 name: linkly
 
 x-app-env: &app-env
-  DATABASE_URL: postgresql://linkly:linkly@postgres:5432/linkly
+  # LINKLY_DB_PASSWORD: set on a server (module 9: Ansible writes it to .env); letters and digits only
+  DATABASE_URL: postgresql://linkly:${LINKLY_DB_PASSWORD:-linkly}@postgres:5432/linkly
   REDIS_URL: redis://redis:6379/0
 
 services:
@@ -11,7 +12,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: linkly
-      POSTGRES_PASSWORD: linkly
+      POSTGRES_PASSWORD: ${LINKLY_DB_PASSWORD:-linkly}   # used only when the pgdata volume is first created
       POSTGRES_DB: linkly
     volumes:
       - pgdata:/var/lib/postgresql/data
