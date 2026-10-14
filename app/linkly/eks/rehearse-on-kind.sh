@@ -78,14 +78,21 @@ until_ok 180 bash -c "[ \"\$(kubectl --context $ctx -n linkly get certificate li
 until_ok 120 bash -c "kubectl --context $ctx -n envoy-gateway-system get svc -l gateway.envoyproxy.io/owning-gateway-name=linkly -o name | grep -q ." \
   || fail "Envoy didn't create a service for the Gateway"
 svc=$(k -n envoy-gateway-system get svc -l gateway.envoyproxy.io/owning-gateway-name=linkly -o name | head -1)
+# (On kind the Gateway stays Programmed=False: nothing hands out load-balancer addresses. Envoy
+# still routes; we reach it with port-forward, which needs a ready proxy pod to attach to.)
+until_ok 60 bash -c "kubectl --context $ctx -n envoy-gateway-system get pod -l gateway.envoyproxy.io/owning-gateway-name=linkly -o name | grep -q ." \
+  || fail "no Envoy proxy pod for the Gateway"
+k -n envoy-gateway-system wait --for=condition=Ready pod -l gateway.envoyproxy.io/owning-gateway-name=linkly --timeout=180s >/dev/null \
+  || fail "the Envoy proxy pod never became ready"
 k -n envoy-gateway-system port-forward "$svc" 18443:443 18080:80 >/dev/null 2>&1 &
 pf_pid=$!
 base="https://$host:18443"
 curl_() { curl -sS --resolve "$host:18443:127.0.0.1" --resolve "$host:18080:127.0.0.1" -k "$@"; }
 until_ok 60 curl_ -f "$base/" || fail "Linkly isn't answering over HTTPS"
 curl_ -f "$base/" | grep -q "<title>Linkly</title>" || fail "page not served over HTTPS"
-issuer=$(curl_ -v -o /dev/null "$base/" 2>&1 | tr -d '\r' | grep -i "issuer:" || true)
-[ -n "$issuer" ] || fail "no certificate presented"
+[ "$(curl_ -o /dev/null -w '%{num_certs}' "$base/" | tr -d '\r')" -ge 1 ] || fail "no certificate presented"
+[ "$(k -n linkly get certificate linkly-tls -o jsonpath='{.spec.dnsNames[0]}')" = "$host" ] \
+  || fail "cert-manager's certificate isn't for $host"
 read -r status location < <(curl_ -o /dev/null -w '%{http_code} %{redirect_url}\n' "http://$host:18080/" | tr -d '\r')
 [ "$status" = 301 ] && [[ "$location" == https://* ]] || fail "plain HTTP should redirect to HTTPS (got $status $location)"
 body=$(curl_ -f -X POST "$base/api/links" -H 'content-type: application/json' -d '{"url":"https://example.com/eks"}') \
