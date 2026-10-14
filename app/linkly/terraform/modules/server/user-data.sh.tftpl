@@ -22,6 +22,12 @@ token=$(curl -sS -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-me
 public_ip=$(curl -sS -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
 
 cd /opt/linkly
-export LINKLY_IMAGES='${linkly_images}' LINKLY_TAG='${linkly_tag}' LINKLY_BASE_URL="http://$public_ip:8080"
+# In .env, not just exported: Compose reads it by itself, so later commands on the server
+# (docker compose ps, logs, the backup in Module 6 lesson 5) work in any shell.
+cat > /opt/linkly/.env <<LINKLY_ENV
+LINKLY_IMAGES=${linkly_images}
+LINKLY_TAG=${linkly_tag}
+LINKLY_BASE_URL=http://$public_ip:8080
+LINKLY_ENV
 docker compose -f compose.yaml -f compose.ghcr.yaml up -d --wait
-echo "Linkly is up at $LINKLY_BASE_URL"
+echo "Linkly is up at http://$public_ip:8080"

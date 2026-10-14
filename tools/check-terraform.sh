@@ -22,6 +22,11 @@ done
 echo "== the state bucket can't be destroyed by accident"
 grep -q 'prevent_destroy = true' bootstrap/main.tf || fail "bootstrap/main.tf lost prevent_destroy"
 
+echo "== settings terraform test can't see"
+grep -q 'ignore_changes = \[ami\]' modules/server/main.tf || fail "a new AL2023 release would replace the server (and its data): keep ignore_changes = [ami]"
+grep -q 'use_lockfile = true' envs/dev/backend.tf || fail "envs/dev/backend.tf lost state locking (use_lockfile)"
+grep -q 'force_destroy = true' envs/dev/main.tf || fail "envs/dev/main.tf: terraform destroy can't remove a backup bucket with backups in it without force_destroy"
+
 echo "== the start-up script, as Terraform renders it"
 rendered=$(mktemp)
 trap 'rm -f "$rendered"' EXIT

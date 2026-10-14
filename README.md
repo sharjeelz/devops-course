@@ -16,8 +16,8 @@ next one starts.
 | 4 | Packaging (Helm, Kustomize) | A Helm chart for Linkly, values per environment |
 | 5 | GitOps with ArgoCD | Git becomes the source of truth: CI bumps the image tag, Argo syncs it |
 | 6 | AWS Foundations | IAM, VPC, EC2, S3, ECR, the CLI; deploy Linkly on EC2 by hand, on purpose |
-| 7 | Terraform | Module 6 as code: VPC, EKS, RDS, remote state, modules |
-| 8 | Production on EKS | Argo deploys Linkly to EKS; autoscaling, AWS secrets, TLS |
+| 7 | Terraform | Module 6 as code: VPC, server, backups, remote state, modules, tests |
+| 8 | Production on EKS | EKS and RDS with Terraform; Argo deploys Linkly; autoscaling, AWS secrets, TLS |
 | 9 | Ansible | Configure the hosts that aren't on Kubernetes; roles |
 | 10 | Python for DevOps | Boto3 scripts: a cost report, snapshot cleanup, a health-check bot |
 | 11 | Observability | Prometheus metrics, Grafana dashboards, Loki logs, alerts |

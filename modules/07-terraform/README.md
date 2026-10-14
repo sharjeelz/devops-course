@@ -12,7 +12,9 @@ shows exactly what would change before anything does.
 > address (about $0.02 per hour together), a small EBS disk, and two S3 buckets (cents).
 > `terraform destroy` removes the environment; the state bucket stays (on purpose) until you delete
 > it at the end of the course. Your Module 6 budget alert keeps watching. Everything is tagged
-> `Project=linkly-course`, so Module 6's `cleanup.sh` finds it too.
+> `Project=linkly-course`, so Module 6's `cleanup.sh` finds it too. But always `terraform destroy`
+> first and `cleanup.sh` last: cleanup.sh also deletes the state bucket, and without its state
+> Terraform can no longer remove what it built.
 
 ## Install
 

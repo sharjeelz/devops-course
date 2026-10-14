@@ -71,12 +71,28 @@ run "first_boot_starts_linkly" {
     error_message = "user_data must carry compose.yaml and compose.ghcr.yaml"
   }
   assert {
-    condition     = strcontains(output.user_data, "LINKLY_IMAGES='ghcr.io/learner' LINKLY_TAG='sha-abc1234'")
+    condition     = strcontains(output.user_data, "LINKLY_IMAGES=ghcr.io/learner\nLINKLY_TAG=sha-abc1234\n")
     error_message = "user_data must run the chosen images and build"
   }
   assert {
     # At the start of a line: compose.ghcr.yaml's own header comment mentions the same command.
     condition     = can(regex("(?m)^docker compose -f compose.yaml -f compose.ghcr.yaml up -d --wait$", output.user_data))
     error_message = "user_data must start Linkly"
+  }
+}
+
+run "settings_survive_for_later_compose_commands" {
+  command = plan
+  assert {
+    condition     = can(regex("(?m)^cat > /opt/linkly/[.]env <<", output.user_data)) && strcontains(output.user_data, "LINKLY_IMAGES=ghcr.io/learner")
+    error_message = "user_data must write /opt/linkly/.env, so docker compose works on the server after first boot (backups, logs)"
+  }
+}
+
+run "iam_names_match_module_6_cleanup" {
+  command = plan
+  assert {
+    condition     = aws_iam_role.this.name == "linkly-course-ec2" && aws_iam_instance_profile.this.name == "linkly-course-ec2"
+    error_message = "the role and instance profile must be named linkly-course-ec2, which cleanup.sh looks for"
   }
 }
