@@ -1,0 +1,12 @@
+# Makes this folder a Kustomize base (module 4). The file has no .yaml extension on purpose:
+# kubectl apply -f k8s/ (module 3) only reads .yaml/.yml/.json files, so it skips this one.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 00-namespace.yaml
+  - 10-config.yaml
+  - 20-postgres.yaml
+  - 30-redis.yaml
+  - 40-api.yaml
+  - 50-worker.yaml
+  - 60-web.yaml

@@ -1,0 +1,8 @@
+# Local kind cluster: the base as it is, labelled as the dev environment.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../k8s
+labels:
+  - pairs:
+      environment: dev
