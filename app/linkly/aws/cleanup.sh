@@ -35,7 +35,7 @@ exists() {
 }
 
 aws sts get-caller-identity >/dev/null 2>&1 || {
-  echo "Not signed in to AWS (or the session expired). Run: aws sso login --profile linkly" >&2
+  echo "Not signed in to AWS (or the session expired). Run: aws sso login --profile linkly (or: aws login --profile linkly)" >&2
   exit 1
 }
 

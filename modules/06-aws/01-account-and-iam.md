@@ -26,10 +26,20 @@ assumes you have a safe way to sign in and a budget alert watching your spending
 ## Example
 
 1. **Root MFA:** sign in as root, then go to *Security credentials* and *Assign MFA device* (an
-   authenticator app is fine).
-2. **Identity Center:** in the console, enable *IAM Identity Center* in your chosen region, create
-   a user for yourself, create a permission set `AdministratorAccess`, and assign it to your user
-   for this account. Accept the email invitation and set a password and MFA.
+   authenticator app is fine). While you're root: *Account* → *IAM user and role access to
+   Billing information* → **Activate**. Without it, nobody but root can open the Billing and
+   Cost Explorer pages, not even an administrator.
+2. **Identity Center:** in the console, enable *IAM Identity Center* in your chosen region and
+   choose **Enable with AWS Organizations** (an organization instance; an "account instance" can't
+   give you access to the account, so it's a dead end here). Create a user for yourself, create a
+   permission set `AdministratorAccess`, and assign it to your user for this account. Accept the
+   email invitation and set a password and MFA.
+
+   > **On AWS's Free plan?** Creating an Organization upgrades the account to the paid plan, and
+   > any remaining Free Tier credits end at that moment. If you'd rather keep them: skip Identity
+   > Center, create an IAM *user* with console access, MFA and the `AdministratorAccess` policy
+   > (no access keys), and sign the CLI in with `aws login --profile linkly` instead of step 3's
+   > SSO commands. It also hands out short-lived credentials. Everything after this works the same.
 3. **CLI sign-in with SSO:**
 
 ```bash

@@ -35,7 +35,10 @@ VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 \
   --query Vpc.VpcId --output text)
 aws ec2 modify-vpc-attribute --vpc-id "$VPC_ID" --enable-dns-hostnames '{"Value":true}'
 
-SUBNET_ID=$(aws ec2 create-subnet --vpc-id "$VPC_ID" --cidr-block 10.0.1.0/24 --availability-zone "${AWS_REGION}a" \
+# An AZ in your region that offers t3.micro (not every region has an "a", nor every AZ every type).
+AZ=$(aws ec2 describe-instance-type-offerings --location-type availability-zone \
+  --filters Name=instance-type,Values=t3.micro --query 'InstanceTypeOfferings[0].Location' --output text)
+SUBNET_ID=$(aws ec2 create-subnet --vpc-id "$VPC_ID" --cidr-block 10.0.1.0/24 --availability-zone "$AZ" \
   --tag-specifications 'ResourceType=subnet,Tags=[{Key=Project,Value=linkly-course},{Key=Name,Value=linkly-course-public}]' \
   --query Subnet.SubnetId --output text)
 
