@@ -26,9 +26,9 @@ all of it with code.
 From your laptop, copy the three files the server needs:
 
 ```bash
-scp -i linkly-course.pem app/linkly/aws/install-docker.sh app/linkly/compose.yaml app/linkly/compose.ghcr.yaml \
+scp -i ~/.ssh/linkly-course.pem app/linkly/aws/install-docker.sh app/linkly/compose.yaml app/linkly/compose.ghcr.yaml \
   ec2-user@"$PUBLIC_IP":
-ssh -i linkly-course.pem ec2-user@"$PUBLIC_IP"
+ssh -i ~/.ssh/linkly-course.pem ec2-user@"$PUBLIC_IP"
 ```
 
 On the server:
@@ -39,9 +39,13 @@ exit                                       # log out and back in, so your user c
 ```
 
 ```bash
-ssh -i linkly-course.pem ec2-user@"$PUBLIC_IP"
-export LINKLY_IMAGES=ghcr.io/<you> LINKLY_TAG=sha-<a build from your packages page>
-export LINKLY_BASE_URL=http://<the PUBLIC_IP>:8080
+ssh -i ~/.ssh/linkly-course.pem ec2-user@"$PUBLIC_IP"
+# Compose reads .env next to compose.yaml by itself, and unlike `export` it survives logging out.
+cat > .env <<'EOF'
+LINKLY_IMAGES=ghcr.io/<you>
+LINKLY_TAG=sha-<a build from your packages page>
+LINKLY_BASE_URL=http://<the PUBLIC_IP>:8080
+EOF
 docker compose -f compose.yaml -f compose.ghcr.yaml up -d --wait
 docker compose -f compose.yaml -f compose.ghcr.yaml ps
 ```

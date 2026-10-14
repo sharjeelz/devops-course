@@ -18,36 +18,63 @@ run() {
 }
 # words: the non-empty, non-"None" words of a text answer.
 words() { tr '\t' '\n' | grep -v -e '^$' -e '^None$' || true; }
+# list: ask AWS for IDs, and stop the whole script if it can't answer: an expired session must never
+# look like "nothing left". Always as an assignment (ids=$(list ...)), so a failure stops the script.
+list() {
+  local out
+  out=$(aws "$@" --output text) || { echo "FAILED: aws $* (nothing after this point was deleted)" >&2; exit 1; }
+  words <<<"$out"
+}
+# exists: 0 if it exists, 1 if AWS says it doesn't; any other error (access denied...) stops the script.
+exists() {
+  local err
+  if err=$(aws "$@" 2>&1 >/dev/null); then return 0; fi
+  case "$err" in *NotFound*|*NoSuchEntity*) return 1 ;; esac
+  echo "FAILED: aws $*: $err" >&2
+  exit 1
+}
+
+aws sts get-caller-identity >/dev/null 2>&1 || {
+  echo "Not signed in to AWS (or the session expired). Run: aws sso login --profile linkly (or: aws login --profile linkly)" >&2
+  exit 1
+}
 
 echo "== EC2 instances in $AWS_REGION"
-mapfile -t instances < <(aws ec2 describe-instances --filters "$tag" \
-  "Name=instance-state-name,Values=pending,running,stopping,stopped" \
-  --query 'Reservations[].Instances[].InstanceId' --output text | words)
+# shutting-down too: an instance terminated by hand holds on to its security group for a while.
+ids=$(list ec2 describe-instances --filters "$tag" \
+  "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped" \
+  --query 'Reservations[].Instances[].InstanceId')
+mapfile -t instances < <(words <<<"$ids")
 if [ "${#instances[@]}" -gt 0 ]; then
   run ec2 terminate-instances --instance-ids "${instances[@]}"
   [ "$dry" = 1 ] || { echo "  waiting for them to terminate..."; aws ec2 wait instance-terminated --instance-ids "${instances[@]}"; }
 fi
 
 echo "== Key pair"
-if aws ec2 describe-key-pairs --key-names linkly-course >/dev/null 2>&1; then
+if exists ec2 describe-key-pairs --key-names linkly-course; then
   run ec2 delete-key-pair --key-name linkly-course
 fi
 
 echo "== VPCs and their network parts"
-for vpc in $(aws ec2 describe-vpcs --filters "$tag" --query 'Vpcs[].VpcId' --output text | words); do
-  for sg in $(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$vpc" \
-      --query "SecurityGroups[?GroupName!='default'].GroupId" --output text | words); do
+vpcs=$(list ec2 describe-vpcs --filters "$tag" --query 'Vpcs[].VpcId')
+for vpc in $vpcs; do
+  sgs=$(list ec2 describe-security-groups --filters "Name=vpc-id,Values=$vpc" \
+    --query "SecurityGroups[?GroupName!='default'].GroupId")
+  for sg in $sgs; do
     run ec2 delete-security-group --group-id "$sg"
   done
-  for subnet in $(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$vpc" --query 'Subnets[].SubnetId' --output text | words); do
+  subnets=$(list ec2 describe-subnets --filters "Name=vpc-id,Values=$vpc" --query 'Subnets[].SubnetId')
+  for subnet in $subnets; do
     run ec2 delete-subnet --subnet-id "$subnet"
   done
-  for rtb in $(aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$vpc" \
-      --query 'RouteTables[?!(Associations[?Main])].RouteTableId' --output text | words); do
+  rtbs=$(list ec2 describe-route-tables --filters "Name=vpc-id,Values=$vpc" \
+    --query 'RouteTables[?!(Associations[?Main])].RouteTableId')
+  for rtb in $rtbs; do
     run ec2 delete-route-table --route-table-id "$rtb"
   done
-  for igw in $(aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$vpc" \
-      --query 'InternetGateways[].InternetGatewayId' --output text | words); do
+  igws=$(list ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$vpc" \
+    --query 'InternetGateways[].InternetGatewayId')
+  for igw in $igws; do
     run ec2 detach-internet-gateway --internet-gateway-id "$igw" --vpc-id "$vpc"
     run ec2 delete-internet-gateway --internet-gateway-id "$igw"
   done
@@ -55,7 +82,8 @@ for vpc in $(aws ec2 describe-vpcs --filters "$tag" --query 'Vpcs[].VpcId' --out
 done
 
 echo "== S3 buckets (linkly-course-*)"
-for bucket in $(aws s3api list-buckets --query "Buckets[?starts_with(Name, 'linkly-course-')].Name" --output text | words); do
+buckets=$(list s3api list-buckets --query "Buckets[?starts_with(Name, 'linkly-course-')].Name")
+for bucket in $buckets; do
   if [ "$dry" = 1 ]; then echo "  would delete: bucket $bucket and every object version in it"; continue; fi
   # A versioned bucket keeps old versions and delete markers: remove them all, a page at a time.
   while :; do
@@ -67,24 +95,28 @@ for bucket in $(aws s3api list-buckets --query "Buckets[?starts_with(Name, 'link
 done
 
 echo "== ECR repositories tagged for the course"
+repos=$(aws ecr describe-repositories --query 'repositories[].[repositoryName,repositoryArn]' --output text) ||
+  { echo "FAILED: aws ecr describe-repositories (nothing after this point was deleted)" >&2; exit 1; }
 while IFS=$'\t' read -r name arn; do
   [ -n "${name:-}" ] && [ "$name" != None ] || continue
-  owner=$(aws ecr list-tags-for-resource --resource-arn "$arn" --query "tags[?Key=='Project'].Value" --output text | words)
-  [ "$owner" = linkly-course ] && run ecr delete-repository --repository-name "$name" --force
-done < <(aws ecr describe-repositories --query 'repositories[].[repositoryName,repositoryArn]' --output text)
+  owner=$(list ecr list-tags-for-resource --resource-arn "$arn" --query "tags[?Key=='Project'].Value")
+  if [ "$owner" = linkly-course ]; then run ecr delete-repository --repository-name "$name" --force; fi
+done <<<"$repos"
 
 echo "== IAM role and instance profile (linkly-course-ec2)"
-if aws iam get-instance-profile --instance-profile-name linkly-course-ec2 >/dev/null 2>&1; then
-  if aws iam get-role --role-name linkly-course-ec2 >/dev/null 2>&1; then
+if exists iam get-instance-profile --instance-profile-name linkly-course-ec2; then
+  if exists iam get-role --role-name linkly-course-ec2; then
     run iam remove-role-from-instance-profile --instance-profile-name linkly-course-ec2 --role-name linkly-course-ec2
   fi
   run iam delete-instance-profile --instance-profile-name linkly-course-ec2
 fi
-if aws iam get-role --role-name linkly-course-ec2 >/dev/null 2>&1; then
-  for p in $(aws iam list-role-policies --role-name linkly-course-ec2 --query 'PolicyNames' --output text | words); do
+if exists iam get-role --role-name linkly-course-ec2; then
+  policies=$(list iam list-role-policies --role-name linkly-course-ec2 --query 'PolicyNames')
+  for p in $policies; do
     run iam delete-role-policy --role-name linkly-course-ec2 --policy-name "$p"
   done
-  for arn in $(aws iam list-attached-role-policies --role-name linkly-course-ec2 --query 'AttachedPolicies[].PolicyArn' --output text | words); do
+  attached=$(list iam list-attached-role-policies --role-name linkly-course-ec2 --query 'AttachedPolicies[].PolicyArn')
+  for arn in $attached; do
     run iam detach-role-policy --role-name linkly-course-ec2 --policy-arn "$arn"
   done
   run iam delete-role --role-name linkly-course-ec2
