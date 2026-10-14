@@ -141,3 +141,19 @@ jobs:
           build-args: VERSION=${{ steps.meta.outputs.version }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy:
+    needs: publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write          # to push the deploy branch, and only this job
+    concurrency:
+      group: deploy-branch
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Point the deploy branch at this build (Argo CD rolls it out)
+        run: app/linkly/gitops/bump-image.sh "sha-${GITHUB_SHA::7}"
