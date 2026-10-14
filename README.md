@@ -34,7 +34,8 @@ GitLab CI, Pulumi, Flux and others): what they are and how they got here.
    as it should be at the start of that module. Stuck, or jumping in late? Start from there.
    `checkpoint/01-containers` is Linkly as it stands at the end of Module 0, and
    `checkpoint/02-ci` is Linkly at the end of Module 1 (with its Dockerfiles and Compose file), and
-   `checkpoint/03-kubernetes` is Linkly at the end of Module 2 (with its CI pipeline).
+   `checkpoint/03-kubernetes` is Linkly at the end of Module 2 (with its CI pipeline), and
+   `checkpoint/04-packaging` is Linkly at the end of Module 3 (with its Kubernetes manifests).
 
 On Windows, install WSL2 first: `wsl --install -d Ubuntu-24.04` in an admin PowerShell, then reboot.
 
