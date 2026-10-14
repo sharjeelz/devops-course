@@ -31,17 +31,23 @@ kubectl -n linkly get secret linkly-db -o jsonpath='{.data.POSTGRES_PASSWORD}' |
 
 The Secret file uses `stringData`, so you write plain values and Kubernetes stores them base64-encoded.
 
-Config changes and restarts (once the API is running in lesson 6, try this):
+Config changes and restarts, shown with a throwaway Deployment that reads the ConfigMap:
 
 ```bash
+kubectl -n linkly create deployment env-demo --image=busybox:1.36 -- sh -c 'sleep 3600'
+kubectl -n linkly set env deployment/env-demo --from=configmap/linkly-config
+kubectl -n linkly rollout status deploy/env-demo
+kubectl -n linkly exec deploy/env-demo -- printenv BASE_URL     # http://localhost:8080
+
 kubectl -n linkly patch configmap linkly-config --type merge -p '{"data":{"BASE_URL":"http://localhost:9999"}}'
-kubectl -n linkly exec deploy/api -- printenv BASE_URL     # still http://localhost:8080
-kubectl -n linkly rollout restart deploy/api
-kubectl -n linkly rollout status deploy/api
-kubectl -n linkly exec deploy/api -- printenv BASE_URL     # http://localhost:9999
+kubectl -n linkly exec deploy/env-demo -- printenv BASE_URL     # still http://localhost:8080
+kubectl -n linkly rollout restart deploy/env-demo
+kubectl -n linkly rollout status deploy/env-demo
+kubectl -n linkly exec deploy/env-demo -- printenv BASE_URL     # http://localhost:9999
 ```
 
-Put it back afterwards with `kubectl apply -f app/linkly/k8s/10-config.yaml` and restart again.
+Clean up: `kubectl -n linkly delete deploy env-demo` and `kubectl apply -f app/linkly/k8s/10-config.yaml`
+to put the setting back. Linkly's own pods work the same way.
 
 ## Lab
 

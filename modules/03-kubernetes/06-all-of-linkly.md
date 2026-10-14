@@ -19,7 +19,17 @@ watch Kubernetes repair it.
   `limit` is a hard ceiling. Go over it and the container is killed (**OOMKilled**) and restarted.
 - **`securityContext`:** `runAsNonRoot: true` makes Kubernetes refuse to start a container as
   root, and it can only check that when the image's `USER` is a *number*. That's why Linkly's
-  Dockerfiles say `USER 10001`. `allowPrivilegeEscalation: false` blocks gaining more rights later.
+  Dockerfiles say `USER 10001`, and why the web image is built on `nginx-unprivileged` (uid 101).
+  `allowPrivilegeEscalation: false` blocks gaining more rights later.
+- **Start-up order: an init container.** Kubernetes starts everything at once. The API creates
+  its table when it starts, so `40-api.yaml` has an **initContainer** that waits until Postgres
+  answers. Without it, the API crashes a few times (`CrashLoopBackOff`, "failed to resolve host
+  'postgres'": the name only exists once Postgres is ready) until Postgres catches up.
+- **Restarting without dropping requests.** When a pod is replaced, it gets SIGTERM at the same
+  moment the cluster starts removing it from its Service, and for a second or two traffic can
+  still arrive at a pod that has stopped listening. The API's `preStop: sleep 5` keeps it serving
+  until it's out of rotation, and nginx's `proxy_connect_timeout 2s` gives up fast instead of
+  hanging on a pod that's gone.
 - **Images in kind:** kind's node can't see your local Docker images, so `kind load docker-image`
   copies them in. With a `:dev` tag and `imagePullPolicy: IfNotPresent`, Kubernetes uses the
   loaded copy and doesn't try a registry. Module 4 pulls from GHCR instead.
@@ -55,10 +65,13 @@ kubectl -n linkly get pods -l app=api -w          # a replacement appears; Ctrl+
 ```
 
 The first terminal keeps printing `307`: the Service sends traffic to the other copy while the
-new one starts and passes its readiness probe.
+new one starts and passes its readiness probe. Try a full rolling restart too,
+`kubectl -n linkly rollout restart deploy/api`, with the loop still running.
 
 Finally, the repo checks all of this for you. `k8s-smoke-test.sh` creates its *own* throwaway
-cluster (so it doesn't touch yours), runs the checks, and deletes it:
+cluster (so it doesn't touch yours), checks the API started without crashing, sends a
+continuous stream of requests through a rolling restart and expects none to fail, deletes the
+Postgres pod and checks the data, and deletes the cluster:
 
 ```bash
 ./k8s-smoke-test.sh            # ... K8S SMOKE TEST PASSED   (takes a few minutes)
@@ -70,6 +83,7 @@ cluster (so it doesn't touch yours), runs the checks, and deletes it:
 - [ ] Apply every manifest and wait for the rollouts
 - [ ] Use Linkly at localhost:8080
 - [ ] Delete an API pod while redirecting links in a loop
+- [ ] Do a rolling restart of the API while the loop runs
 - [ ] Run the Kubernetes smoke test
 
 ## Check yourself
@@ -92,7 +106,17 @@ happening, raise the limit or fix the memory use.
 
 </details>
 
-3. Why does `imagePullPolicy: IfNotPresent` matter with kind?
+3. What would go wrong without the API's `preStop` sleep?
+
+<details><summary>Answer</summary>
+
+During a rolling restart, an old pod would stop listening while the Service was still sending it
+traffic for a moment, so a few requests would fail with 502s. The pause keeps it serving until
+it's been taken out of rotation.
+
+</details>
+
+4. Why does `imagePullPolicy: IfNotPresent` matter with kind?
 
 <details><summary>Answer</summary>
 

@@ -38,7 +38,7 @@ From your own machine:
 
 ```bash
 kubectl -n linkly port-forward svc/redis 6379:6379     # leave it running, then in another terminal:
-redis-cli -h localhost ping                             # if you have redis-cli; or use Lesson 1's container
+redis-cli -h localhost ping                             # PONG (redis-cli: sudo apt install -y redis-tools)
 ```
 
 ## Lab

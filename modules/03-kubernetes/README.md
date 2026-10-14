@@ -20,11 +20,21 @@ Check both: `kubectl version --client` and `kind version`.
 
 ## Before you start
 
-Stop the Compose stack from Module 1, because the cluster's front door uses port 8080:
+- **Bring in this module's files.** You start from `checkpoint/03-kubernetes`, and this module is
+  about reading and running Kubernetes manifests rather than typing them, so take them from the
+  end-of-module checkpoint (your fork has it if you forked with all branches):
 
-```bash
-cd app/linkly && docker compose down
-```
+  ```bash
+  git switch -c module-3 origin/checkpoint/03-kubernetes
+  git checkout origin/checkpoint/04-packaging -- app/linkly     # manifests, kind config, updated images
+  git commit -m "Module 3 files"
+  ```
+
+  (No checkpoint branches in your fork? Use `upstream/` instead of `origin/` after
+  `git remote add upstream https://github.com/sharjeelz/devops-course.git && git fetch upstream`.)
+- **Free port 8080.** Stop the Compose stack from Module 1: `cd app/linkly && docker compose down`.
+  If something else holds 8080, change `hostPort: 8080` in `app/linkly/kind-config.yaml` before
+  creating the cluster, and use that port wherever the lessons say 8080.
 
 Everything in this module runs on your machine and costs nothing.
 

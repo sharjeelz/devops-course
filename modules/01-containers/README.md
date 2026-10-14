@@ -25,6 +25,16 @@ Check it: `docker run --rm hello-world` prints "Hello from Docker!".
 
 ## Before you start
 
+**Bring in this module's files.** The lessons read Linkly's Dockerfiles, nginx config and
+`compose.yaml`, which arrive with this module. Starting from `checkpoint/01-containers`, take them
+from the end-of-module checkpoint:
+
+```bash
+git switch -c module-1 origin/checkpoint/01-containers
+git checkout origin/checkpoint/02-ci -- app/linkly
+git commit -m "Module 1 files"
+```
+
 Module 0 installed nginx, Redis and Postgres as services that start with the machine, and they
 hold the ports this module uses (8080, 6379, 5432). Stop them and keep them from starting again:
 

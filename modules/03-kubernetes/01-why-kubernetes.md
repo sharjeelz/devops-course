@@ -45,8 +45,8 @@ kubectl config current-context         # kind-linkly
 The `kube-system` namespace holds the cluster's own parts as pods: `etcd`, `kube-apiserver`,
 `kube-scheduler`, `kube-controller-manager`, `coredns` (the cluster's DNS) and `kindnet` (its network).
 
-`app/linkly/kind-config.yaml` asks kind to forward your machine's port 8080 into the cluster;
-lesson 6 uses it.
+`app/linkly/kind-config.yaml` asks kind to forward your machine's port 8080 (only on
+`127.0.0.1`, not your whole network) into the cluster; lesson 6 uses it.
 
 ## Lab
 
