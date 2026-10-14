@@ -1,0 +1,4 @@
+# Keep Linux line endings everywhere: learners copy these files into Linux (nginx.conf, scripts).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
