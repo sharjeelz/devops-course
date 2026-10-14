@@ -37,7 +37,8 @@ GitLab CI, Pulumi, Flux and others): what they are and how they got here.
    `checkpoint/03-kubernetes` is Linkly at the end of Module 2 (with its CI pipeline), and
    `checkpoint/04-packaging` is Linkly at the end of Module 3 (with its Kubernetes manifests), and
    `checkpoint/05-gitops` is Linkly at the end of Module 4 (with its Helm chart and Kustomize overlays), and
-   `checkpoint/06-aws` is Linkly at the end of Module 5 (deployed by Argo CD from the `deploy` branch).
+   `checkpoint/06-aws` is Linkly at the end of Module 5 (deployed by Argo CD from the `deploy` branch), and
+   `checkpoint/07-terraform` is Linkly at the end of Module 6 (with its AWS files and clean-up script).
 
 On Windows, install WSL2 first: `wsl --install -d Ubuntu-24.04` in an admin PowerShell, then reboot.
 
