@@ -26,13 +26,25 @@ conflicts isn't optional.
 
 ## Example
 
-Fork this course repo on GitHub, then in your Linux terminal:
+Fork this course repo on GitHub. In the fork dialog, **untick "Copy the `main` branch only"**: the
+`checkpoint/...` branches every module starts from live on other branches.
+
+On a fresh Ubuntu, tell Git who you are and log in to GitHub once (GitHub no longer accepts your
+password for `git push`; the GitHub CLI sets up a token for you):
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+sudo apt install -y gh && gh auth login        # choose GitHub.com, HTTPS, and log in with a browser
+```
+
+Then:
 
 ```bash
 cd ~
 git clone https://github.com/<you>/devops-course.git
 cd devops-course
-git switch checkpoint/00-foundations
+git switch checkpoint/00-foundations      # "invalid reference"? See the note below
 git switch -c my-notes
 echo "Started Module 0 on $(date +%F)" > MY-NOTES.md
 git add MY-NOTES.md
@@ -40,6 +52,9 @@ git commit -m "Start my notes"
 git push -u origin my-notes
 git log --oneline --graph --all | head -20
 ```
+
+> **Forked with `main` only?** Fetch the checkpoints from the original repo instead:
+> `git remote add upstream https://github.com/<course-owner>/devops-course.git && git fetch upstream && git switch -c checkpoint/00-foundations upstream/checkpoint/00-foundations`
 
 `git add -p` is worth learning: it shows each change and asks whether to stage it, so you
 commit exactly what you meant to.

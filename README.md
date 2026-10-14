@@ -28,7 +28,7 @@ GitLab CI, Pulumi, Flux and others): what they are and how they got here.
 
 ## How to start
 
-1. Fork this repo and clone your fork.
+1. Fork this repo (untick **"Copy the `main` branch only"**, since the checkpoint branches matter) and clone your fork.
 2. Open [`modules/00-foundations/README.md`](modules/00-foundations/README.md).
 3. Every module's README names a **checkpoint branch** (`checkpoint/NN-<module>`): Linkly exactly
    as it should be at the start of that module. Stuck, or jumping in late? Start from there.

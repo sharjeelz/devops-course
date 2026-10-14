@@ -33,9 +33,9 @@ processes it starts, but only if they're *exported*.
 ```bash
 cat /etc/os-release                 # which Linux is this?
 ls -la /etc | head                  # long listing: permissions, owner, group, size, date
-ps aux | grep -i ssh                # find processes by name
-sudo systemctl status ssh           # is a service running? (install it with: sudo apt install -y openssh-server)
-journalctl -u ssh --since "10 min ago"   # that service's recent logs
+ps aux | grep -i cron               # find processes by name
+systemctl status cron               # is a service running? cron runs scheduled jobs; it's on by default
+journalctl -u cron --since today    # that service's logs
 echo $PATH                          # where the shell looks for programs
 ```
 

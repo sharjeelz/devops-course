@@ -42,15 +42,25 @@ python3 -m http.server 9000 --bind 0.0.0.0     # terminal 1: reachable from outs
 curl -I localhost:9000                         # terminal 2: HTTP/1.0 200 OK
 ```
 
-Now open `http://localhost:9000` in your Windows browser: WSL2 forwards it. Stop the server
-(Ctrl+C) and start it with `--bind 127.0.0.1`, then try again from Windows.
+Now reach it from **outside** the Linux machine. With WSL2, Windows is a different machine with
+its own network address, but there's a catch: `http://localhost:9000` in your Windows browser
+goes through a special WSL relay that connects from *inside* Linux, so it always works and
+proves nothing here. Use Linux's real address instead:
+
+```bash
+hostname -I        # e.g. 172.24.88.15 (the first address is the one you want)
+```
+
+Open `http://<that address>:9000` in your Windows browser: the directory listing appears. Now
+stop the server (Ctrl+C), start it with `--bind 127.0.0.1`, and reload that page: the connection
+is refused. `curl localhost:9000` inside Linux still works, because that *is* the same machine.
 
 ## Lab
 
 - [ ] List every port listening on your machine and name the program behind each
 - [ ] Resolve `github.com` and say which IP your machine would use
-- [ ] Start a web server on port 9000 and reach it from your Windows browser
-- [ ] Make the same server unreachable from outside by binding it to 127.0.0.1
+- [ ] Start a web server on port 9000 and reach it from Windows at Linux's own address (`hostname -I`)
+- [ ] Bind the same server to 127.0.0.1 and show Windows can no longer reach it at that address
 - [ ] Read a `curl -v` output and point at the status line, the headers and the body
 
 ## Check yourself

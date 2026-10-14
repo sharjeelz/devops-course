@@ -93,13 +93,14 @@ sudo nginx -t && sudo systemctl reload nginx
 
 Expected: `syntax is ok` and `test is successful`.
 
-**7. Use it.** Open http://localhost:8080 in your browser, shorten a link, open the short link,
+**7. Use it.** (Don't be surprised that `https://example.com` comes back as `https://example.com/`:
+the API stores links in their standard form.) Open http://localhost:8080 in your browser, shorten a link, open the short link,
 then press **Refresh**: the click count goes up within a few seconds (that's the worker at work).
 Or from the terminal:
 
 ```bash
 curl -s -X POST localhost:8080/api/links -H 'content-type: application/json' -d '{"url":"https://example.com"}'
-curl -si localhost:8080/r/<code> | head -3        # HTTP/1.1 307 and a location: header
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' localhost:8080/r/<code>   # 307 https://example.com/
 curl -s localhost:8080/api/links/<code>           # "clicks":1 after a few seconds
 ```
 
