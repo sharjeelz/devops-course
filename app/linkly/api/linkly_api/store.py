@@ -55,6 +55,9 @@ CREATE TABLE IF NOT EXISTS links (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 )
 """
+# Any fixed number: replicas starting together take turns creating the schema. Without it, two
+# concurrent CREATE TABLE IF NOT EXISTS can still fail one of them (a known Postgres race).
+SCHEMA_LOCK = 4242
 
 
 class PgStore:
@@ -62,7 +65,8 @@ class PgStore:
 
     def __init__(self, dsn: str) -> None:
         self.dsn = dsn
-        with self._conn() as c:
+        with self._conn() as c, c.transaction():
+            c.execute("SELECT pg_advisory_xact_lock(%s)", (SCHEMA_LOCK,))  # released when the transaction ends
             c.execute(SCHEMA)
 
     def _conn(self) -> psycopg.Connection:
