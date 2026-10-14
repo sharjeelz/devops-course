@@ -1,0 +1,14 @@
+# Run Linkly from the images your pipeline published (module 6) instead of building them here, for
+# example on an EC2 instance. Layer it on top of compose.yaml:
+#   LINKLY_IMAGES=ghcr.io/<you> LINKLY_TAG=sha-abc1234 \
+#     docker compose -f compose.yaml -f compose.ghcr.yaml up -d --wait
+services:
+  api:
+    build: !reset null
+    image: ${LINKLY_IMAGES:?set LINKLY_IMAGES to your registry, e.g. ghcr.io/<you>}/linkly-api:${LINKLY_TAG:?set LINKLY_TAG to a build, e.g. sha-abc1234}
+  worker:
+    build: !reset null
+    image: ${LINKLY_IMAGES:?set LINKLY_IMAGES to your registry, e.g. ghcr.io/<you>}/linkly-worker:${LINKLY_TAG:?set LINKLY_TAG to a build, e.g. sha-abc1234}
+  web:
+    build: !reset null
+    image: ${LINKLY_IMAGES:?set LINKLY_IMAGES to your registry, e.g. ghcr.io/<you>}/linkly-web:${LINKLY_TAG:?set LINKLY_TAG to a build, e.g. sha-abc1234}
