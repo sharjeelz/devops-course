@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest>=8
+httpx2>=2.13
+fakeredis>=2.23
