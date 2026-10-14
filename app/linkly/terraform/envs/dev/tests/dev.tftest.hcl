@@ -66,3 +66,26 @@ run "refuses_uppercase_image_paths" {
   }
   expect_failures = [var.linkly_images]
 }
+
+run "hands_the_server_to_ansible" {
+  command = apply
+  variables {
+    configure_with_ansible = true
+  }
+  assert {
+    condition     = module.server.user_data_enabled == false
+    error_message = "configure_with_ansible = true must turn off the server's user_data"
+  }
+  assert {
+    condition     = yamldecode(output.ansible_inventory).all.children.linkly.hosts["linkly-course"].ansible_host == module.server.public_ip
+    error_message = "ansible_inventory must put the server in the linkly group, at its public IP"
+  }
+  assert {
+    condition     = yamldecode(output.ansible_inventory).all.children.linkly.hosts["linkly-course"].ansible_user == "ec2-user"
+    error_message = "ansible_inventory must log in as ec2-user"
+  }
+  assert {
+    condition     = yamldecode(output.ansible_inventory).all.children.linkly.hosts["linkly-course"].linkly_base_url == "http://${module.server.public_ip}:8080"
+    error_message = "ansible_inventory must give Linkly its public address"
+  }
+}

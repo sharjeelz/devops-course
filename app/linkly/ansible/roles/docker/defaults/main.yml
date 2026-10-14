@@ -1,0 +1,9 @@
+# The Compose plugin isn't in Amazon Linux's packages, so it comes from GitHub: a pinned version,
+# checked against its sha256 before it's installed (as in Module 6's install-docker.sh).
+docker_compose_version: v5.6.0
+docker_compose_sha256:
+  x86_64: 40343e21ca777173e69cff5dbafeb37c6f81f3b0d57d9e597f036e95eb63e76a
+  aarch64: 733ec76717ceb59052a9609b9dadfb523b2df8eab57a54212872d10a58078ea2
+# Who may use docker without sudo.
+docker_users:
+  - "{{ ansible_user }}"

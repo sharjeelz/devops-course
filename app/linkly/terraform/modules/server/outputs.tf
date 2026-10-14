@@ -18,3 +18,7 @@ output "user_data" {
   description = "The start-up script, as rendered (handy for tests and debugging)."
   value       = local.user_data
 }
+
+output "user_data_enabled" {
+  value = var.user_data_enabled
+}

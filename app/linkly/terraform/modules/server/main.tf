@@ -84,7 +84,7 @@ resource "aws_instance" "this" {
     encrypted   = true
   }
 
-  user_data                   = local.user_data
+  user_data                   = var.user_data_enabled ? local.user_data : null
   user_data_replace_on_change = true # a new image tag = a fresh instance that starts it from scratch
 
   tags = { Name = var.name }

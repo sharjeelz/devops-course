@@ -1,0 +1,5 @@
+# Linkly on your EC2 server: your images and build (as in terraform.tfvars).
+linkly_images: ghcr.io/<you>
+linkly_tag: sha-abc1234
+# In vault.yml next to this file, encrypted:  vault_linkly_db_password: <openssl rand -hex 16>
+linkly_db_password: "{{ vault_linkly_db_password }}"

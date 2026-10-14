@@ -1,0 +1,62 @@
+- name: Install the basics
+  ansible.builtin.dnf:
+    name: "{{ common_packages }}"
+    state: present
+
+- name: Install only security updates automatically
+  ansible.builtin.lineinfile:
+    path: /etc/dnf/automatic.conf
+    regexp: "^{{ item.key }} *="
+    line: "{{ item.key }} = {{ item.value }}"
+    insertafter: '^\[commands\]'
+  loop:
+    - { key: upgrade_type, value: "{{ common_auto_updates }}" }
+    - { key: apply_updates, value: "yes" }
+
+- name: Run dnf-automatic every day
+  ansible.builtin.systemd_service:
+    name: dnf-automatic.timer
+    enabled: true
+    state: started
+
+- name: Create the admins
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    shell: /bin/bash
+  loop: "{{ common_admins }}"
+  loop_control: { label: "{{ item.name }}" }
+
+- name: Create each admin's ~/.ssh
+  ansible.builtin.file:
+    path: "/home/{{ item.name }}/.ssh"
+    state: directory
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
+    mode: "0700"
+  loop: "{{ common_admins }}"
+  loop_control: { label: "{{ item.name }}" }
+
+- name: Give each admin their SSH key
+  ansible.builtin.copy:
+    dest: "/home/{{ item.name }}/.ssh/authorized_keys"
+    content: "{{ item.key }}\n"
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
+    mode: "0600"
+  loop: "{{ common_admins }}"
+  loop_control: { label: "{{ item.name }}" }
+
+- name: Let admins sudo
+  ansible.builtin.template:
+    src: sudoers-admins.j2
+    dest: /etc/sudoers.d/50-admins
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Harden SSH (checked with sshd -t before it's put in place)
+  ansible.builtin.template:
+    src: sshd-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-hardening.conf
+    mode: "0600"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Reload sshd

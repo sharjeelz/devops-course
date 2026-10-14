@@ -1,0 +1,18 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Linkly (Docker Compose in {{ linkly_dir }})
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory={{ linkly_dir }}
+ExecStart=/usr/bin/docker compose -f compose.yaml -f compose.ghcr.yaml up -d --wait --remove-orphans
+ExecReload=/usr/bin/docker compose -f compose.yaml -f compose.ghcr.yaml up -d --wait --remove-orphans
+ExecStop=/usr/bin/docker compose -f compose.yaml -f compose.ghcr.yaml down
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

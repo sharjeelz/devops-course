@@ -1,0 +1,20 @@
+# Linkly's hosts, configured (module 9). Run from app/linkly/ansible:
+#   ansible-playbook site.yml                 (add --check --diff to see what would change first)
+- name: Every host - packages, updates, people, SSH
+  hosts: all
+  become: true
+  roles:
+    - common
+
+- name: Bastions - the one way in
+  hosts: bastions
+  become: true
+  roles:
+    - bastion
+
+- name: Linkly's servers - Docker and Linkly
+  hosts: linkly
+  become: true
+  roles:
+    - docker
+    - linkly

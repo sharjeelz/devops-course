@@ -1,0 +1,7 @@
+- name: Let SSH hop through this host, to SSH ports only
+  ansible.builtin.template:
+    src: sshd-bastion.conf.j2
+    dest: /etc/ssh/sshd_config.d/05-bastion.conf
+    mode: "0600"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Reload sshd

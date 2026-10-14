@@ -1,0 +1,9 @@
+# Every host in the lab.
+ansible_user: ec2-user
+ansible_python_interpreter: /usr/bin/python3
+
+# People who may log in and sudo, on every host (the common role). In the lab, "alice" uses the
+# lab's own key; on real servers each person brings their own public key.
+common_admins:
+  - name: alice
+    key: "{{ lookup('ansible.builtin.file', '/keys/id_ed25519.pub') }}"

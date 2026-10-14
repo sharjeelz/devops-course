@@ -1,0 +1,5 @@
+# {{ ansible_managed }}
+# Read before 10-hardening.conf, so on the bastion these values win: it forwards TCP (that's what
+# ssh -J / ProxyJump uses), but only to the ports in PermitOpen.
+AllowTcpForwarding yes
+PermitOpen {{ bastion_permit_open }}

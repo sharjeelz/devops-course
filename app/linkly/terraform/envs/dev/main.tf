@@ -22,4 +22,5 @@ module "server" {
   linkly_images     = var.linkly_images
   linkly_tag        = var.linkly_tag
   backup_bucket_arn = module.backups.bucket_arn
+  user_data_enabled = !var.configure_with_ansible
 }

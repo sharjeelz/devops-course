@@ -1,0 +1,7 @@
+# "reload" runs docker compose up again: Compose recreates only the containers whose image or
+# settings changed, and the database volume stays.
+- name: Apply Linkly
+  ansible.builtin.systemd_service:
+    name: linkly
+    state: reloaded
+    daemon_reload: true

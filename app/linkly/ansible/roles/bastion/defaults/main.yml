@@ -1,0 +1,2 @@
+# Where the bastion may forward SSH connections to (sshd's PermitOpen): any host ("*"), port 22 only.
+bastion_permit_open: "*:22"

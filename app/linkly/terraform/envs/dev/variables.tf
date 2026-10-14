@@ -43,3 +43,9 @@ variable "instance_type" {
   type    = string
   default = "t3.micro"
 }
+
+variable "configure_with_ansible" {
+  description = "Module 9: boot the server plain and configure it with Ansible instead of user_data."
+  type        = bool
+  default     = false
+}

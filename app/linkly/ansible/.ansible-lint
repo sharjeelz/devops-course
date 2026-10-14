@@ -1,0 +1,4 @@
+# ansible-lint's settings (module 9). "production" is its strictest profile.
+profile: production
+exclude_paths:
+  - lab/

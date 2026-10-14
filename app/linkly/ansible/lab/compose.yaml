@@ -1,0 +1,47 @@
+# Module 9's lab: Ansible's control node and two "EC2 instances" on your laptop.
+#   control  - where you run ansible (docker compose exec control bash)
+#   bastion  - the one host you can reach; it has a leg in both networks
+#   web1     - Linkly's server; only on the inside network, so only reachable through the bastion
+# Start: docker compose up -d --build     Stop and delete: docker compose down -v
+name: linkly-ansible-lab
+
+x-host: &host
+  build: { context: ., dockerfile: host.Dockerfile }
+  privileged: true            # systemd and Docker inside the container need it (lab only)
+  cgroup: host
+  volumes:
+    - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    - keys:/lab-keys:ro
+  tmpfs: [/run, /tmp]
+
+services:
+  control:
+    build: { context: ., dockerfile: control.Dockerfile }
+    volumes:
+      - keys:/keys
+      - ../..:/linkly          # app/linkly: the playbooks, roles and compose files
+    networks: [outside]
+
+  bastion:
+    <<: *host
+    hostname: bastion
+    networks: [outside, inside]
+
+  web1:
+    <<: *host
+    hostname: web1
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - keys:/lab-keys:ro
+      - web1-docker:/var/lib/docker   # Docker inside web1 needs a real filesystem, not overlay
+    ports:
+      - "${LAB_WEB_PORT:-18081}:8080" # Linkly on web1, at http://localhost:18081 (like its public IP)
+    networks: [inside]
+
+networks:
+  outside: {}
+  inside: {}
+
+volumes:
+  keys: {}
+  web1-docker: {}

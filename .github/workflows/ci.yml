@@ -133,6 +133,18 @@ jobs:
       - name: Rehearse the EKS setup on kind (External Secrets, cert-manager, HPA, password rotation)
         run: app/linkly/eks/rehearse-on-kind.sh
 
+  # Linkly's Ansible (module 9): lint, then the whole lab - a bastion and an Amazon Linux server in
+  # containers, configured twice (the second run must change nothing), hardening and reboot checked.
+  ansible:
+    needs: lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: ansible-lint, syntax check, compose password
+        run: tools/check-ansible.sh
+      - name: Rehearse site.yml in the lab
+        run: app/linkly/ansible/lab/rehearse.sh
+
   # terraform plan against your real AWS account, with no stored keys (module 8, lesson 7).
   # Runs only once you've set the repository variables; until then it's skipped.
   terraform-plan:
@@ -162,7 +174,7 @@ jobs:
           terraform plan -input=false -lock-timeout=2m -no-color
 
   publish:
-    needs: [smoke, kubernetes, eks-rehearsal]
+    needs: [smoke, kubernetes, eks-rehearsal, ansible]
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:

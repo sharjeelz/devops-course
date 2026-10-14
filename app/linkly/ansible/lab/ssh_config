@@ -1,0 +1,7 @@
+# The control container's SSH settings (module 9). On your own machine they'd go in ~/.ssh/config.
+Host *
+  IdentityFile /keys/id_ed25519
+  UserKnownHostsFile /keys/known_hosts
+  # Trust a host's key the first time, refuse if it ever changes (a lab; on real servers, check it).
+  StrictHostKeyChecking accept-new
+  ServerAliveInterval 15

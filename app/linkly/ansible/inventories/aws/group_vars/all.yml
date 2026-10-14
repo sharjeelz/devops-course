@@ -1,0 +1,3 @@
+# Your real servers (module 9, lesson 6). hosts.yml comes from Terraform:
+#   terraform -chdir=../terraform/envs/dev output -raw ansible_inventory > inventories/aws/hosts.yml
+ansible_python_interpreter: /usr/bin/python3

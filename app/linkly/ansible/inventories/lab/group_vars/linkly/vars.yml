@@ -1,0 +1,8 @@
+# Linkly's servers in the lab (the linkly role). The images are the ones CI publishes (module 6).
+linkly_images: ghcr.io/sharjeelz
+linkly_tag: sha-85779b4
+linkly_base_url: http://localhost:18081
+# The password lives encrypted in vault.yml next to this file (lesson 4): create it with
+#   ansible-vault create inventories/lab/group_vars/linkly/vault.yml
+# and put one line in it:  vault_linkly_db_password: <letters and digits, 16 or more>
+linkly_db_password: "{{ vault_linkly_db_password }}"

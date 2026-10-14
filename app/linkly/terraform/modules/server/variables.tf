@@ -41,3 +41,9 @@ variable "backup_bucket_arn" {
   description = "The only bucket this server may use."
   type        = string
 }
+
+variable "user_data_enabled" {
+  description = "Set itself up on first boot (module 7). false: boot plain Amazon Linux, for Ansible to configure (module 9)."
+  type        = bool
+  default     = true
+}

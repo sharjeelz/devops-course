@@ -1,0 +1,63 @@
+- name: Check the settings before touching the server
+  ansible.builtin.assert:
+    that:
+      - linkly_images is defined and linkly_images | length > 0
+      - linkly_tag is defined and linkly_tag | length > 0
+      - linkly_base_url is defined and linkly_base_url is match('https?://')
+      # It goes into DATABASE_URL as it is, so: letters and digits only (openssl rand -hex 16).
+      - linkly_db_password is defined and linkly_db_password is match('^[A-Za-z0-9]{16,}$')
+    fail_msg: >-
+      Set linkly_images, linkly_tag, linkly_base_url (http:// or https://) and
+      linkly_db_password (16+ letters and digits, in vault.yml) for this host.
+    quiet: true
+  no_log: true   # the password is one of the values checked
+
+- name: Create Linkly's folder
+  ansible.builtin.file:
+    path: "{{ linkly_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Copy Linkly's Compose files
+  ansible.builtin.copy:
+    src: "{{ linkly_source_dir }}/{{ item }}"
+    dest: "{{ linkly_dir }}/{{ item }}"
+    mode: "0644"
+  loop: [compose.yaml, compose.ghcr.yaml]
+  notify: Apply Linkly
+
+- name: Write Linkly's settings (.env, readable by root only)
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ linkly_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true   # its diff would show the password
+  notify: Apply Linkly
+
+- name: Install Linkly as a systemd service
+  ansible.builtin.template:
+    src: linkly.service.j2
+    dest: /etc/systemd/system/linkly.service
+    mode: "0644"
+  notify: Apply Linkly
+
+- name: Start Linkly now and at every boot
+  ansible.builtin.systemd_service:
+    name: linkly
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply any change now, not at the end of the play
+  ansible.builtin.meta: flush_handlers
+
+- name: Check that Linkly answers
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ linkly_port }}/"
+    return_content: true
+  register: linkly_page
+  until: "'<title>Linkly</title>' in linkly_page.content"
+  retries: 30
+  delay: 2

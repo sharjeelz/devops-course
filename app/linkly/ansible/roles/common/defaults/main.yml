@@ -1,0 +1,9 @@
+# Everything here can be overridden in the inventory's group_vars or host_vars.
+common_packages:
+  - tar
+  - jq
+  - dnf-automatic
+# Security updates install themselves every day (dnf-automatic); other updates wait for you.
+common_auto_updates: security
+# People who may log in with their key and sudo: [{name: alice, key: "ssh-ed25519 AAAA..."}]
+common_admins: []

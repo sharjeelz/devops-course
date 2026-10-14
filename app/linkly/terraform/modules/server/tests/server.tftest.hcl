@@ -96,3 +96,22 @@ run "iam_names_match_module_6_cleanup" {
     error_message = "the role and instance profile must be named linkly-course-ec2, which cleanup.sh looks for"
   }
 }
+
+run "ansible_configures_it_instead" {
+  command = plan
+  variables {
+    user_data_enabled = false
+  }
+  assert {
+    condition     = aws_instance.this.user_data == null
+    error_message = "with user_data_enabled = false the instance must boot plain, for Ansible to configure (module 9)"
+  }
+}
+
+run "user_data_stays_on_by_default" {
+  command = plan
+  assert {
+    condition     = aws_instance.this.user_data != null
+    error_message = "by default the server must still set itself up on first boot (module 7)"
+  }
+}

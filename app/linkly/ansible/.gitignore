@@ -1,0 +1,2 @@
+# Written by terraform output (module 9, lesson 6): it changes with every new server.
+inventories/aws/hosts.yml

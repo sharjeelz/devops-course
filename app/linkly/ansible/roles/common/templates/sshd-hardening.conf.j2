@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+# sshd uses the FIRST value it reads for each setting, and reads sshd_config.d/ in name order, so
+# 10-hardening.conf wins over the distribution's 50-redhat.conf and cloud-init's 50-cloud-init.conf.
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+GSSAPIAuthentication no
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding no
+MaxAuthTries 3
+AllowUsers {{ ([ansible_user] + common_admins | map(attribute='name')) | unique | join(' ') }}

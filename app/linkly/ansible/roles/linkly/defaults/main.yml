@@ -1,0 +1,5 @@
+# Required (no defaults): linkly_images, linkly_tag, linkly_base_url, linkly_db_password.
+linkly_dir: /opt/linkly
+# Where compose.yaml and compose.ghcr.yaml are on the control node: app/linkly.
+linkly_source_dir: "{{ playbook_dir }}/.."
+linkly_port: 8080
