@@ -1,0 +1,8 @@
+# The environment Argo CD deploys (module 5): your local kind cluster, running the images your
+# pipeline published. On the "deploy" branch, CI sets image.tag after every successful build of
+# main, and Argo CD rolls it out. To change what runs, change this file on "deploy" (a revert there
+# is a rollback). Change the prefix to your own GHCR namespace.
+# The database keeps the chart's local default password: fine for kind, never for real (module 8).
+image:
+  prefix: ghcr.io/sharjeelz/
+  tag: sha-85779b4
