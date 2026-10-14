@@ -43,18 +43,24 @@ spec:
 EOF
 ```
 
-Try the prod values without a tag first: it refuses, with a message telling you what's missing.
+Try the prod values without the two required settings first: the chart refuses, one at a time,
+telling you what's missing and how to pass it.
 
 ```bash
 helm template t helm/linkly -f helm/linkly/values-prod.yaml
+# Error: ... postgres.password is required: pass one at install time, e.g. --set-string postgres.password=<letters and digits>
+helm template t helm/linkly -f helm/linkly/values-prod.yaml --set-string postgres.password=x
 # Error: ... image.tag is required: pin an exact image, e.g. --set image.tag=sha-abc1234
 ```
+
+The password may contain letters, digits and `_` only (it goes into a URL), and `--set-string`
+keeps an all-digit password as text.
 
 Now install, with a tag from your packages page on GitHub (`sha-…`) and a password of your own:
 
 ```bash
 helm install linkly helm/linkly -n linkly --create-namespace \
-  -f helm/linkly/values-prod.yaml --set image.tag=sha-<your build> --set postgres.password=<choose one>
+  -f helm/linkly/values-prod.yaml --set image.tag=sha-<your build> --set-string postgres.password=<letters and digits>
 kubectl -n linkly rollout status deploy/api
 kubectl -n linkly get pods -l app=api -o jsonpath='{range .items[*]}{.spec.containers[0].image}{"\n"}{end}'
 kubectl -n linkly wait --for=condition=Accepted gateway/linkly
@@ -62,12 +68,16 @@ svc=$(kubectl -n envoy-gateway-system get svc -l gateway.envoyproxy.io/owning-ga
 kubectl -n envoy-gateway-system port-forward "svc/$svc" 8081:80
 ```
 
+(If the last command says the Service isn't there yet, wait a few seconds and run the `svc=` line again.)
+
 Open http://localhost:8081: three API pods running your pipeline's images, reached through the
-Gateway. Compare with Kustomize's version of the same environment: `kubectl kustomize kustomize/prod`.
+Gateway. Compare with the Kustomize prod overlay, `kubectl kustomize kustomize/prod`. It makes
+the same image, replica and Service changes, but it's a simpler sketch: it keeps the base's local
+password and has no Gateway, so on its own it has no front door.
 
 ## Lab
 
-- [ ] Try the prod values without an image tag and read the error
+- [ ] Try the prod values without a password or image tag and read both errors
 - [ ] Install the prod values with your own GHCR images
 - [ ] Reach Linkly through the Gateway
 - [ ] Compare the Helm prod render with the Kustomize prod overlay

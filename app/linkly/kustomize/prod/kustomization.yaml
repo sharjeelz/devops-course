@@ -1,5 +1,7 @@
 # Production-like: GHCR images pinned to one build, three API replicas, no NodePort.
 # Change newName to your own GHCR namespace and newTag to the build you want.
+# A sketch for comparison with Helm: it still uses the base's local password and adds no Gateway,
+# so on its own the ClusterIP web Service has no front door. Helm's values-prod.yaml does both.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

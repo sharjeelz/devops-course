@@ -11,7 +11,7 @@ baseUrl: http://localhost:8080  # used to build short links
 postgres:
   image: postgres:16-alpine
   user: linkly
-  password: linkly              # local only. Letters and digits: it goes into DATABASE_URL.
+  password: linkly              # local only. Letters, digits and _ (it goes into DATABASE_URL); the chart checks.
   database: linkly
   storage: 1Gi
   resources:

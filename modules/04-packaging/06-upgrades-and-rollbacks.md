@@ -21,7 +21,7 @@ probes and preStop, and Helm's revision history, the answers are "yes" and "one 
   pods keep serving, but the upgrade is stuck half-done until you act.
 - **Let Helm notice for you:** `--wait --timeout 60s` makes Helm wait for everything to be ready.
   With **`--rollback-on-failure`** (Helm 4's name for the old `--atomic`), a failed upgrade is
-  rolled back automatically.
+  rolled back automatically, and Helm turns waiting on by itself when you use it.
 
 ## Example
 
@@ -32,20 +32,23 @@ port-forward on 8081, or `localhost:8080` with the dev values; replace `<code>`)
 while true; do curl -s -o /dev/null -w '%{http_code} ' localhost:8081/r/<code>; sleep 0.2; done
 ```
 
-A good upgrade, under load:
+A good upgrade, under load. Changing `baseUrl` changes the config checksum, so every api and
+worker pod is replaced one by one: a real rolling update.
 
 ```bash
-helm upgrade linkly app/linkly/helm/linkly -n linkly --reuse-values --set api.replicas=4 --wait
+helm upgrade linkly app/linkly/helm/linkly -n linkly --reuse-values --set baseUrl=http://localhost:9999 --wait
 helm history linkly -n linkly
+kubectl -n linkly get pods                # new api and worker pods; postgres-0 untouched
 ```
 
-The loop keeps printing `307`: on the author's machine, 222 requests through an upgrade, none failed.
+The loop keeps printing `307`. On the author's machine, 130 requests (half of them creating new
+links) went through this upgrade and none failed.
 
 A bad upgrade, made on purpose:
 
 ```bash
 helm upgrade linkly app/linkly/helm/linkly -n linkly --reuse-values --set image.tag=does-not-exist
-kubectl -n linkly get pods -l app=api     # old pods Running, one new pod ErrImagePull
+kubectl -n linkly get pods                # 3 old api pods Running, 1 new ErrImagePull; web and worker one each too
 ```
 
 The loop *still* prints `307`, because the old pods never stopped. Helm reported success anyway,
@@ -83,13 +86,13 @@ image, so it never became ready, and the old pods kept serving.
 
 </details>
 
-2. What does `--rollback-on-failure` do, and why does it need `--wait`?
+2. What does `--rollback-on-failure` do, and why does it involve waiting?
 
 <details><summary>Answer</summary>
 
-If the upgrade fails, Helm rolls back to the previous good revision automatically. Without
-waiting, Helm considers the upgrade successful as soon as the objects are accepted, so it would
-never see the failure.
+If the upgrade fails, Helm rolls back to the previous good revision automatically. It can only
+notice a failure by waiting for the resources to become ready, so Helm 4 switches waiting on
+whenever this flag is set (`--wait` is still fine to write).
 
 </details>
 

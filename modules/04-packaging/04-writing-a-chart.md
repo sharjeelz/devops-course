@@ -24,9 +24,19 @@ Open `app/linkly/helm/linkly/`:
 - **`templates/_helpers.tpl`:** reusable snippets, `define`d once and `include`d everywhere.
   Linkly's has the standard labels, the image name (which uses `required`, so a missing tag fails
   loudly), and a config checksum.
-- **The checksum annotation:** pods carry `checksum/config: <hash of config.yaml>`. When a
-  config or password changes in an upgrade, the hash changes, the pod template changes, and
-  Kubernetes rolls the pods. That's the automatic version of Module 3's `rollout restart`.
+- **The checksum annotation:** the api and worker pods carry `checksum/config: <hash of the
+  ConfigMap and Secret>`. When a setting changes in an upgrade, the hash changes, the pod template
+  changes, and Kubernetes rolls those pods. That's the automatic version of Module 3's
+  `rollout restart`. Postgres deliberately has *no* checksum: restarting the database for a
+  `BASE_URL` change would only drop writes.
+- **Passwords are different.** Postgres reads `POSTGRES_PASSWORD` only when it first creates its
+  data. Changing `postgres.password` in a later upgrade would update the Secret but *not* the
+  database's real password, so the api and worker would fail to log in (and clicks would quietly
+  stop being counted). Changing a database password needs `ALTER USER` inside Postgres; Module 8
+  does it properly. If you try it here, `helm rollback` fixes it.
+- **Checked inputs:** `templates/secret.yaml` checks the user, database and password contain only
+  letters, digits and `_`, because they go into `DATABASE_URL`, and converts them to text first,
+  because `--set` turns an all-digit password into a number.
 - **Selectors stay `app: <name>`.** Selectors can't be changed after a Deployment exists, and
   nginx, the smoke test and Module 3 all rely on them, so the chart *adds* labels but never changes these.
 - **`templates/NOTES.txt`:** what's printed after install.

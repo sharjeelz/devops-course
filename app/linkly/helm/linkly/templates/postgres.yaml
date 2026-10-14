@@ -28,8 +28,6 @@ spec:
       labels:
         app: postgres
         {{- include "linkly.labels" . | nindent 8 }}
-      annotations:
-        checksum/config: {{ include "linkly.configChecksum" . }}
     spec:
       containers:
         - name: postgres

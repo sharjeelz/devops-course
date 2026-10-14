@@ -43,8 +43,9 @@ kubectl kustomize kustomize/prod > /tmp/prod.yaml
 diff /tmp/dev.yaml /tmp/prod.yaml
 ```
 
-The differences are exactly the table above: the image names and tags, `replicas: 3`, the web
-Service's `type` and `nodePort`, and the `environment` label.
+The differences are the first three rows of the table: the image names and tags, `replicas: 3`,
+the web Service's `type` and `nodePort`, plus the `environment` label. The overlay is a sketch: it
+doesn't handle the password, which mustn't be in Git at all (lesson 5 passes it at install time).
 
 ## Lab
 

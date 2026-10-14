@@ -14,7 +14,8 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 {{- printf "%s%s:%s" $root.Values.image.prefix $name (required "image.tag is required: pin an exact image, e.g. --set image.tag=sha-abc1234" $root.Values.image.tag) -}}
 {{- end }}
 
-{{/* Changes whenever config or credentials change, so pods restart on upgrade. */}}
+{{/* Changes whenever the app's config or credentials change, so the api and worker restart on upgrade.
+     Postgres doesn't use it: it reads its settings only when it first creates its data. */}}
 {{- define "linkly.configChecksum" -}}
-{{- include (print .Template.BasePath "/config.yaml") . | sha256sum -}}
+{{- print (include (print .Template.BasePath "/config.yaml") .) (include (print .Template.BasePath "/secret.yaml") .) | sha256sum -}}
 {{- end }}
