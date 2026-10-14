@@ -74,6 +74,8 @@ def app_from_env() -> FastAPI:
     """uvicorn linkly_api.main:app_from_env --factory"""
     return create_app(
         PgStore(os.environ["DATABASE_URL"]),
-        redis.Redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True, socket_timeout=1),
+        redis.Redis.from_url(
+            os.environ.get("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True, socket_timeout=1
+        ),
         os.environ.get("BASE_URL", "http://localhost:8080").rstrip("/"),
     )

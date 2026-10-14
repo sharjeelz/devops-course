@@ -2,7 +2,6 @@ import fakeredis
 import pytest
 import redis
 from fastapi.testclient import TestClient
-
 from linkly_api.main import create_app
 from linkly_api.store import MemoryStore
 

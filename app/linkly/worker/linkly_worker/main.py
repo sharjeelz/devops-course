@@ -4,7 +4,7 @@ import signal
 import threading
 import time
 from collections import Counter
-from typing import Callable
+from collections.abc import Callable
 
 import psycopg
 import redis
@@ -43,11 +43,13 @@ def drain(r: redis.Redis, add: Callable[[str, int], None], batch: int = 100, tim
 
 
 def step(r: redis.Redis, add: Callable[[str, int], None], sleep: Callable[[float], None] = time.sleep) -> int:
-    """One round of work. If Redis or Postgres is down, say so and wait a little instead of crashing: clicks wait in the queue."""
+    """One round of work. If Redis or Postgres is down, say so and wait a little instead of crashing:
+    clicks wait in the queue."""
     try:
         return drain(r, add)
     except (redis.RedisError, psycopg.Error) as e:
-        log.warning("%s unavailable (%s); retrying in 2 s", "redis" if isinstance(e, redis.RedisError) else "postgres", e)
+        which = "redis" if isinstance(e, redis.RedisError) else "postgres"
+        log.warning("%s unavailable (%s); retrying in 2 s", which, e)
         sleep(2)
         return 0
 

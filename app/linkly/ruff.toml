@@ -1,0 +1,6 @@
+# Ruff, the linter CI runs (module 2). Same rules in your editor and in CI.
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "I", "B", "UP"]

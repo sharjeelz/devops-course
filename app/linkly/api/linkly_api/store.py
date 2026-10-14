@@ -1,5 +1,5 @@
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Protocol
 
 import psycopg
@@ -33,7 +33,7 @@ class MemoryStore:
     def create(self, code: str, url: str) -> Link:
         if code in self._links:
             raise CodeTaken(code)
-        self._links[code] = Link(code, url, 0, datetime.now(timezone.utc))
+        self._links[code] = Link(code, url, 0, datetime.now(UTC))
         return self._links[code]
 
     def get(self, code: str) -> Link | None:
@@ -71,7 +71,9 @@ class PgStore:
     def create(self, code: str, url: str) -> Link:
         try:
             with self._conn() as c, c.cursor(row_factory=class_row(Link)) as cur:
-                cur.execute("INSERT INTO links (code, url) VALUES (%s, %s) RETURNING code, url, clicks, created_at", (code, url))
+                cur.execute(
+                    "INSERT INTO links (code, url) VALUES (%s, %s) RETURNING code, url, clicks, created_at", (code, url)
+                )
                 return cur.fetchone()
         except psycopg.errors.UniqueViolation as e:
             raise CodeTaken(code) from e

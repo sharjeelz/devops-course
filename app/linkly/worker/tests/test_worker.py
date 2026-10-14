@@ -1,7 +1,6 @@
+import fakeredis
 import psycopg
 import redis
-import fakeredis
-
 from linkly_worker.main import drain
 
 

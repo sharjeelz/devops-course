@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from linkly_api.store import CodeTaken, MemoryStore, PgStore
 
 
