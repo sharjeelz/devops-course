@@ -81,5 +81,6 @@ exactly what changed and restore an earlier version.
 
 ## Clean up
 
-The state bucket stays for lesson 5. At the very end of the course, Module 6's `cleanup.sh`
+The state bucket stays for lesson 5. Run `terraform destroy` before anything that deletes it:
+without its state, Terraform can't remove what it built. At the very end of the course, Module 6's `cleanup.sh`
 removes it (it deletes buckets named `linkly-course-*`, every version included).

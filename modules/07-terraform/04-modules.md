@@ -27,7 +27,8 @@ can reuse it, test it on its own, and read an environment as a short list of bui
 - **Validation:** variables can check their values. `envs/dev` refuses `0.0.0.0/0`, a private key
   pasted by mistake, and the `latest` tag before anything is planned.
 - **Registry modules:** the Terraform Registry has well-maintained community modules (e.g.
-  `terraform-aws-modules/vpc/aws`, which Module 8's EKS uses). Pin their versions like providers.
+  `terraform-aws-modules/vpc/aws` and `/eks/aws`). They're great once you know what's inside;
+  Module 8 builds EKS from plain resources first, on this network module. Pin their versions like providers.
 
 ## Example
 

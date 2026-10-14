@@ -18,6 +18,11 @@ server, the machine sets itself up, because the steps are written down in the co
 - **`user_data_replace_on_change = true`:** change the tag and Terraform *replaces* the instance,
   so the new one boots and sets itself up from scratch. A server you can replace without thinking
   is a server you can trust.
+- **What doesn't replace it:** a newer Amazon Linux release. The AMI comes from a parameter that
+  always points at the newest one, so the instance has `ignore_changes = [ami]`; otherwise a
+  routine `apply` weeks later would replace the server and lose its database. The start-up script
+  also writes `/opt/linkly/.env`, so `docker compose` commands work when you SSH in later
+  (`cd /opt/linkly && sudo docker compose -f compose.yaml -f compose.ghcr.yaml ps`).
 - **tfvars:** your own values (`allowed_cidr`, your public key, images, tag) go in
   `terraform.tfvars`, which Git ignores. Copy `terraform.tfvars.example`.
 - **Your SSH key:** Terraform gets your *public* key; the private key never leaves your machine,
