@@ -1,5 +1,6 @@
-# Linkly, managed by Argo CD (module 5). Two sources: the chart from main, and the environment's
-# values from the "deploy" branch ($deploy). Change both repoURLs to your fork.
+# Linkly, managed by Argo CD (module 5). It deploys the "deploy" branch: main plus which image runs
+# (app/linkly/gitops/values.yaml there). CI updates that branch after every successful build of
+# main; a revert there is a rollback. Change repoURL to your fork.
 #   kubectl apply -f app/linkly/gitops/application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -8,16 +9,13 @@ metadata:
   namespace: argocd
 spec:
   project: default
-  sources:
-    - repoURL: https://github.com/sharjeelz/devops-course.git
-      targetRevision: main
-      path: app/linkly/helm/linkly
-      helm:
-        valueFiles:
-          - $deploy/app/linkly/gitops/values.yaml
-    - repoURL: https://github.com/sharjeelz/devops-course.git
-      targetRevision: deploy
-      ref: deploy
+  source:
+    repoURL: https://github.com/sharjeelz/devops-course.git
+    targetRevision: deploy
+    path: app/linkly/helm/linkly
+    helm:
+      valueFiles:
+        - ../../gitops/values.yaml       # relative to the chart: app/linkly/gitops/values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: linkly
