@@ -19,3 +19,12 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 {{- define "linkly.configChecksum" -}}
 {{- print (include (print .Template.BasePath "/config.yaml") .) (include (print .Template.BasePath "/secret.yaml") .) | sha256sum -}}
 {{- end }}
+
+{{/* With an external database, the credentials Secret changes when RDS rotates the password: Reloader
+     (module 8) then restarts the pods so they pick up the new one. Nothing without one. */}}
+{{- define "linkly.reloadAnnotations" -}}
+{{- if .Values.externalDatabase.enabled }}
+annotations:
+  secret.reloader.stakater.com/reload: linkly-db
+{{- end }}
+{{- end }}

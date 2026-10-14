@@ -16,8 +16,11 @@ metadata:
   name: api
   labels:
     {{- include "linkly.labels" . | nindent 4 }}
+  {{- include "linkly.reloadAnnotations" . | nindent 2 }}
 spec:
-  replicas: {{ .Values.api.replicas }}
+  {{- if not .Values.api.autoscaling.enabled }}
+  replicas: {{ .Values.api.replicas }}  # with autoscaling on, the HPA sets this instead
+  {{- end }}
   selector:
     matchLabels:
       app: api
@@ -34,7 +37,12 @@ spec:
       initContainers:
         - name: wait-for-postgres
           image: {{ .Values.postgres.image }}
-          command: ["sh", "-c", "until pg_isready -h postgres -U {{ .Values.postgres.user }} -d {{ .Values.postgres.database }}; do echo waiting for postgres; sleep 2; done"]
+          # The same URL the app uses, so this works for the in-cluster postgres and for RDS alike.
+          command: ["sh", "-c", "until pg_isready -d \"$DATABASE_URL\"; do echo waiting for the database; sleep 2; done"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: linkly-db, key: DATABASE_URL }
           securityContext:
             runAsUser: 70
             allowPrivilegeEscalation: false

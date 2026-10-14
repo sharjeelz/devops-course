@@ -25,7 +25,12 @@ redis:
     limits: { memory: 128Mi }
 
 api:
-  replicas: 2
+  replicas: 2                   # ignored when autoscaling is on
+  autoscaling:
+    enabled: false              # true: an HPA (needs metrics-server) and a PodDisruptionBudget (module 8)
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilization: 70    # percent of the CPU request
   resources:
     requests: { cpu: 50m, memory: 96Mi }
     limits: { memory: 256Mi }
@@ -48,3 +53,20 @@ web:
 gateway:
   enabled: false                # true: a Gateway + HTTPRoute (needs a Gateway API implementation installed)
   className: eg
+  hostname: ""                  # e.g. linkly.example.com (required with TLS)
+  tls:
+    enabled: false              # true: HTTPS on 443 with a cert-manager certificate, HTTP redirects (module 8)
+    clusterIssuer: ""           # the cert-manager ClusterIssuer, e.g. letsencrypt
+
+# A database outside the cluster (module 8: RDS). Instead of the postgres StatefulSet and a Secret
+# from values, External Secrets builds linkly-db from a secret in AWS Secrets Manager.
+externalDatabase:
+  enabled: false
+  host: ""                      # e.g. the RDS endpoint
+  port: 5432
+  database: linkly
+  sslmode: require              # RDS requires TLS; the kind rehearsal uses disable
+  externalSecret:
+    secretStore: ""             # a ClusterSecretStore name
+    remoteKey: ""               # the secret's name or ARN in Secrets Manager
+    refreshInterval: 1m         # how soon a rotated password reaches the cluster

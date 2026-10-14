@@ -4,6 +4,7 @@ metadata:
   name: worker
   labels:
     {{- include "linkly.labels" . | nindent 4 }}
+  {{- include "linkly.reloadAnnotations" . | nindent 2 }}
 spec:
   replicas: {{ .Values.worker.replicas }}
   selector:

@@ -1,18 +1,38 @@
 {{- if .Values.gateway.enabled }}
+{{- $tls := .Values.gateway.tls.enabled -}}
+{{- if $tls }}{{ $_ := required "gateway.hostname is required with TLS: the name the certificate is for" .Values.gateway.hostname }}{{ end -}}
 # The front door through the Gateway API. The GatewayClass is cluster infrastructure, so it isn't
 # part of this chart: install a Gateway API implementation first (module 3, lesson 7).
+# With TLS (module 8), cert-manager sees the annotation and puts a certificate in linkly-tls.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: linkly
   labels:
     {{- include "linkly.labels" . | nindent 4 }}
+  {{- if $tls }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ required "gateway.tls.clusterIssuer is required with TLS" .Values.gateway.tls.clusterIssuer }}
+  {{- end }}
 spec:
   gatewayClassName: {{ .Values.gateway.className }}
   listeners:
     - name: http
       protocol: HTTP
       port: 80
+      {{- with .Values.gateway.hostname }}
+      hostname: {{ . }}
+      {{- end }}
+    {{- if $tls }}
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: {{ .Values.gateway.hostname }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: linkly-tls
+    {{- end }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -23,8 +43,32 @@ metadata:
 spec:
   parentRefs:
     - name: linkly
+      {{- if $tls }}
+      sectionName: https
+      {{- end }}
   rules:
     - backendRefs:
         - name: web
           port: 8080
+{{- if $tls }}
+---
+# Plain HTTP only redirects to HTTPS. (cert-manager's own challenge route is more specific, so
+# Let's Encrypt can still reach it over HTTP.)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: linkly-redirect
+  labels:
+    {{- include "linkly.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: linkly
+      sectionName: http
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+{{- end }}
 {{- end }}
