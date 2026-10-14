@@ -27,17 +27,25 @@ def drain(r: redis.Redis, add: Callable[[str, int], None], batch: int = 100, tim
         if code is None:
             break
         counts[code] += 1
-    for code, n in counts.items():
-        add(code, n)
+    pending = dict(counts)
+    try:
+        for code, n in counts.items():
+            add(code, n)
+            del pending[code]
+    except Exception:
+        # Couldn't save them (Postgres down?): put the unsaved clicks back so none are lost.
+        for code, n in pending.items():
+            r.rpush("clicks", *[code] * n)
+        raise
     return sum(counts.values())
 
 
 def step(r: redis.Redis, add: Callable[[str, int], None], sleep: Callable[[float], None] = time.sleep) -> int:
-    """One round of work. If Redis is down, say so and wait a little instead of crashing: clicks wait in the queue."""
+    """One round of work. If Redis or Postgres is down, say so and wait a little instead of crashing: clicks wait in the queue."""
     try:
         return drain(r, add)
-    except redis.RedisError as e:
-        log.warning("redis unavailable (%s); retrying in 2 s", e)
+    except (redis.RedisError, psycopg.Error) as e:
+        log.warning("%s unavailable (%s); retrying in 2 s", "redis" if isinstance(e, redis.RedisError) else "postgres", e)
         sleep(2)
         return 0
 

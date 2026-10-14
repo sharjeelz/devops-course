@@ -1,3 +1,4 @@
+import psycopg
 import redis
 import fakeredis
 
@@ -46,3 +47,19 @@ def test_step_survives_redis_being_down():
     waited = []
     assert step(DownRedis(), lambda c, n: None, sleep=waited.append) == 0
     assert waited == [2]
+
+
+def test_step_puts_clicks_back_when_postgres_is_down():
+    from linkly_worker.main import step
+
+    r = fakeredis.FakeRedis(decode_responses=True)
+    for code in ["aaaaaaa", "aaaaaaa", "bbbbbbb"]:
+        r.lpush("clicks", code)
+
+    def postgres_down(code, n):
+        raise psycopg.OperationalError("connection refused")
+
+    waited = []
+    assert step(r, postgres_down, sleep=waited.append) == 0
+    assert waited == [2]
+    assert sorted(r.lrange("clicks", 0, -1)) == ["aaaaaaa", "aaaaaaa", "bbbbbbb"]
