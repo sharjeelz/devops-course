@@ -1,0 +1,50 @@
+# Linkly's Helm chart (module 4). The defaults suit a local kind cluster with images loaded as :dev.
+# One Linkly per namespace: the Services keep fixed names (api, web, postgres, redis), as nginx expects.
+
+image:
+  prefix: ""                    # "" = local images (kind load); e.g. "ghcr.io/<you>/" for GHCR
+  tag: dev
+  pullPolicy: IfNotPresent
+
+baseUrl: http://localhost:8080  # used to build short links
+
+postgres:
+  image: postgres:16-alpine
+  user: linkly
+  password: linkly              # local only. Letters and digits: it goes into DATABASE_URL.
+  database: linkly
+  storage: 1Gi
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+
+redis:
+  image: redis:7-alpine
+  resources:
+    requests: { cpu: 25m, memory: 32Mi }
+    limits: { memory: 128Mi }
+
+api:
+  replicas: 2
+  resources:
+    requests: { cpu: 50m, memory: 96Mi }
+    limits: { memory: 256Mi }
+
+worker:
+  replicas: 1
+  resources:
+    requests: { cpu: 25m, memory: 64Mi }
+    limits: { memory: 192Mi }
+
+web:
+  replicas: 1
+  service:
+    type: NodePort              # NodePort for kind (see kind-config.yaml); ClusterIP behind a Gateway
+    nodePort: 30080
+  resources:
+    requests: { cpu: 25m, memory: 32Mi }
+    limits: { memory: 128Mi }
+
+gateway:
+  enabled: false                # true: a Gateway + HTTPRoute (needs a Gateway API implementation installed)
+  className: eg

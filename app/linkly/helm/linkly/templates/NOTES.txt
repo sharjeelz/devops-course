@@ -1,0 +1,10 @@
+Linkly {{ .Chart.AppVersion }} is installed in namespace {{ .Release.Namespace }} (images: {{ .Values.image.prefix }}linkly-*:{{ .Values.image.tag }}).
+
+Wait for it:   kubectl -n {{ .Release.Namespace }} rollout status deploy/api
+{{- if eq .Values.web.service.type "NodePort" }}
+Open it:       http://localhost:8080   (kind maps node port {{ .Values.web.service.nodePort }} there)
+{{- else if .Values.gateway.enabled }}
+Reach it:      through the Gateway "linkly" (on kind: port-forward the Envoy Service, module 3 lesson 7)
+{{- else }}
+Reach it:      kubectl -n {{ .Release.Namespace }} port-forward svc/web 8080:8080
+{{- end }}

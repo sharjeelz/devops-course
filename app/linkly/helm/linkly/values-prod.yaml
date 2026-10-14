@@ -1,0 +1,17 @@
+# A production-like setup: images from GHCR, three API replicas, traffic through the Gateway API.
+#   helm install linkly app/linkly/helm/linkly -n linkly --create-namespace \
+#     -f app/linkly/helm/linkly/values-prod.yaml --set image.tag=sha-<commit> --set postgres.password=<secret>
+# Change the prefix to your own GHCR namespace.
+image:
+  prefix: ghcr.io/sharjeelz/
+  tag: ""                       # required: pin an exact build (sha-<commit> or a release like 0.2.0)
+
+api:
+  replicas: 3
+
+web:
+  service:
+    type: ClusterIP
+
+gateway:
+  enabled: true
