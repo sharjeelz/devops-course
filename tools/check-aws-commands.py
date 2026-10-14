@@ -15,7 +15,7 @@ import subprocess
 import sys
 import tempfile
 
-SERVICES = r"(?:ec2|s3api|s3|ecr|iam|sts|ssm|budgets|resourcegroupstaggingapi|sso|configure|ce|cloudwatch|logs)"
+SERVICES = r"(?:ec2|s3api|s3|ecr|iam|sts|ssm|budgets|resourcegroupstaggingapi|sso|configure|ce|cloudwatch|logs|eks|rds|secretsmanager)"
 CONNECT_FAILED = ("Could not connect to the endpoint URL", "Connect timeout on endpoint URL", "EndpointConnectionError")
 SKIP = (re.compile(r"^aws (--version|configure( |$)|sso login)"), re.compile(r" help$"))
 
