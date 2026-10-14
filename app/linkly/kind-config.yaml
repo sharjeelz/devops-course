@@ -6,4 +6,5 @@ nodes:
   - role: control-plane
     extraPortMappings:
       - containerPort: 30080
-        hostPort: 8080
+        hostPort: 8080              # port 8080 taken? change this one number, then recreate the cluster
+        listenAddress: "127.0.0.1"  # only this machine, not your whole network

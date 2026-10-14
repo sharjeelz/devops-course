@@ -26,6 +26,13 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
+      initContainers:
+        - name: wait-for-postgres          # the API creates its table at start-up, so it needs Postgres first
+          image: postgres:16-alpine
+          command: ["sh", "-c", "until pg_isready -h postgres -U linkly -d linkly; do echo waiting for postgres; sleep 2; done"]
+          securityContext:
+            runAsUser: 70                  # the postgres image's own non-root user
+            allowPrivilegeEscalation: false
       containers:
         - name: api
           image: linkly-api:dev
@@ -49,5 +56,8 @@ spec:
           resources:
             requests: { cpu: 50m, memory: 96Mi }
             limits: { memory: 256Mi }
+          lifecycle:
+            preStop:                       # keep serving while Services stop sending traffic here
+              sleep: { seconds: 5 }
           securityContext:
             allowPrivilegeEscalation: false

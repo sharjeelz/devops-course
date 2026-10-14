@@ -41,7 +41,7 @@ spec:
             - containerPort: 5432
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "linkly", "-d", "linkly"]
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "linkly", "-d", "linkly"]   # TCP: first-boot setup only listens on the socket
             periodSeconds: 3
           resources:
             requests: { cpu: 50m, memory: 128Mi }

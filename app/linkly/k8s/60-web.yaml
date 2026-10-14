@@ -29,6 +29,8 @@ spec:
       labels:
         app: web
     spec:
+      securityContext:
+        runAsNonRoot: true
       containers:
         - name: web
           image: linkly-web:dev
@@ -41,3 +43,5 @@ spec:
           resources:
             requests: { cpu: 25m, memory: 32Mi }
             limits: { memory: 128Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
