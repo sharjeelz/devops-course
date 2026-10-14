@@ -83,8 +83,9 @@ lesson 6 explains them, including why `flavor: latest=false` is there.
 Open a pull request from `module-2` into **your fork's** `main` (base repository
 `<you>/devops-course`, see the module README) and merge it once the checks pass. The merge is a
 push to `main`, so all four jobs run and `publish` pushes three images. Find them on your
-GitHub profile under **Packages**. New packages are private; to pull one without logging in,
-open its **Package settings** and change the visibility to public. Then:
+GitHub profile under **Packages**. Images your workflow publishes are linked to the repository
+and take on its visibility, so a public fork gives you public images that anyone can pull without
+logging in. (If yours show **Private**, change it under the package's **Package settings**.) Then:
 
 ```bash
 docker pull ghcr.io/<you>/linkly-api:main
