@@ -13,19 +13,31 @@ git clone -q "$tmp/origin.git" "$tmp/work" 2>/dev/null
 cd "$tmp/work"
 mkdir -p app/linkly/gitops
 cp "$here/values.yaml" "$here/bump-image.sh" app/linkly/gitops/
+echo "chart v1" > CHART
 g add . && g commit -q -m init && git push -q origin HEAD:main
-tag_on_deploy() { git -C "$tmp/origin.git" show "deploy:app/linkly/gitops/values.yaml" | sed -nE 's/^  tag: (.*)/\1/p'; }
+on_deploy() { git -C "$tmp/origin.git" show "deploy:$1"; }
+tag_on_deploy() { on_deploy app/linkly/gitops/values.yaml | sed -nE 's/^  tag: (.*)/\1/p'; }
 
-# 1. First run in a fresh fork: no deploy branch yet. It's created and gets the tag.
+# 1. First run in a fresh fork: no deploy branch yet. It's created from main and gets the tag.
 app/linkly/gitops/bump-image.sh sha-aaaaaaa >/dev/null
 check "creates the deploy branch and sets the tag" [ "$(tag_on_deploy)" = sha-aaaaaaa ]
+check "deploy starts as main plus the tag" [ "$(on_deploy CHART)" = "chart v1" ]
 
-# 2. A re-run with the same tag makes no new commit.
+# 2. A re-run with the same tag (and nothing new on main) makes no new commit.
 before=$(git -C "$tmp/origin.git" rev-parse deploy)
 app/linkly/gitops/bump-image.sh sha-aaaaaaa >/dev/null
 check "the same tag twice makes no commit" [ "$(git -C "$tmp/origin.git" rev-parse deploy)" = "$before" ]
 
-# 3. Race: someone pushes to deploy between our fetch and our push. A pre-push hook does exactly
+# 3. A change on main (e.g. the chart) reaches deploy with the next bump, and deploy keeps its tag
+#    even though main's values.yaml still has the old one.
+git switch -q -C main origin/main 2>/dev/null || git switch -q main
+echo "chart v2" > CHART && g commit -q -am "chart v2" && git push -q origin main
+app/linkly/gitops/bump-image.sh sha-ccccccc >/dev/null
+check "main's changes are merged into deploy" [ "$(on_deploy CHART)" = "chart v2" ]
+check "deploy has the new tag after merging main" [ "$(tag_on_deploy)" = sha-ccccccc ]
+before=$(git -C "$tmp/origin.git" rev-parse deploy)
+
+# 4. Race: someone pushes to deploy between our fetch and our push. A pre-push hook does exactly
 #    that, once, so our first push is rejected and the script must start again from the new tip.
 git clone -q "$tmp/origin.git" "$tmp/other" 2>/dev/null
 cat > .git/hooks/pre-push <<HOOK
@@ -44,7 +56,13 @@ check "the other person's commit was kept" git -C "$tmp/origin.git" cat-file -e 
 check "history was not rewritten (no force push)" git -C "$tmp/origin.git" merge-base --is-ancestor "$before" deploy
 rm -f .git/hooks/pre-push
 
-# 4. An invalid tag is refused before anything happens.
+# 5. Rolling back = reverting the last bump commit on deploy.
+git fetch -q origin deploy && git switch -q -C deploy origin/deploy
+last_bump=$(git log --format=%H --grep '^deploy: linkly sha-bbbbbbb' -1)
+g revert --no-edit "$last_bump" >/dev/null && git push -q origin deploy
+check "reverting the bump commit puts the previous tag back" [ "$(tag_on_deploy)" = sha-ccccccc ]
+
+# 6. An invalid tag is refused before anything happens.
 check "refuses an invalid tag" bash -c '! app/linkly/gitops/bump-image.sh "bad tag;rm" >/dev/null 2>&1'
 
 [ "$fails" -eq 0 ] && echo "all bump-image tests passed" || { echo "$fails bump-image test(s) failed"; exit 1; }
