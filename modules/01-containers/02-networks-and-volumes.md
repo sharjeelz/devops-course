@@ -27,6 +27,8 @@ docker network create linkly-net
 docker run -d --name postgres --network linkly-net \
   -e POSTGRES_USER=linkly -e POSTGRES_PASSWORD=linkly -e POSTGRES_DB=linkly \
   -v linkly-pg:/var/lib/postgresql/data postgres:16-alpine
+# The first start on an empty volume sets up the database (~5 s) before it accepts connections:
+until docker run --rm --network linkly-net postgres:16-alpine pg_isready -qh postgres; do sleep 1; done
 docker run --rm --network linkly-net postgres:16-alpine pg_isready -h postgres
 # postgres:5432 - accepting connections      ← found by name
 ```
@@ -39,7 +41,8 @@ docker rm -f postgres                                   # the container is gone.
 docker run -d --name postgres --network linkly-net \
   -e POSTGRES_USER=linkly -e POSTGRES_PASSWORD=linkly -e POSTGRES_DB=linkly \
   -v linkly-pg:/var/lib/postgresql/data postgres:16-alpine
-sleep 3; docker exec postgres psql -U linkly -d linkly -tc "SELECT t FROM notes;"
+until docker run --rm --network linkly-net postgres:16-alpine pg_isready -qh postgres; do sleep 1; done
+docker exec postgres psql -U linkly -d linkly -tc "SELECT t FROM notes;"
 #  still here                                           # ...the data isn't
 ```
 
@@ -88,8 +91,9 @@ for HTML you're editing, so changes on your machine show up in the container at 
 
 <details><summary>Answer</summary>
 
-Volumes not used by any container. Including your Postgres data if its container is removed, so
-be careful.
+Since Docker 23: only *anonymous* volumes that no container uses (the unnamed ones images like
+Redis create). `docker volume prune -a` also deletes unused *named* volumes, including your
+Postgres data if its container is gone, so read the list before you say yes.
 
 </details>
 

@@ -18,10 +18,21 @@ and keep their data, and describe the whole stack in one file.
 - **Windows:** install [Docker Desktop](https://www.docker.com/products/docker-desktop/). In
   *Settings → General*, keep **Use the WSL 2 based engine** on; in *Settings → Resources → WSL
   integration*, turn it on for your Ubuntu. Then `docker` works inside your Ubuntu terminal.
-- **Linux or a VM:** `sudo apt install -y docker.io docker-compose-v2 && sudo usermod -aG docker $USER`,
+- **Linux or a VM:** `sudo apt install -y docker.io docker-compose-v2 docker-buildx && sudo usermod -aG docker $USER`,
   then log out and back in (so you don't need `sudo` for every `docker` command).
 
 Check it: `docker run --rm hello-world` prints "Hello from Docker!".
+
+## Before you start
+
+Module 0 installed nginx, Redis and Postgres as services that start with the machine, and they
+hold the ports this module uses (8080, 6379, 5432). Stop them and keep them from starting again:
+
+```bash
+sudo systemctl disable --now nginx redis-server postgresql
+```
+
+(`sudo systemctl enable --now ...` brings them back if you ever want Module 0's setup again.)
 
 ## Lessons
 

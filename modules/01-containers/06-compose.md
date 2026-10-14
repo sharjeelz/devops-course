@@ -18,6 +18,12 @@ one command.
 - **Restart policies:** `restart: unless-stopped` brings a crashed container back, and brings
   the stack back after a reboot.
 - **Variables:** `${LINKLY_PORT:-8080}` means "the LINKLY_PORT environment variable, or 8080".
+  Compose also reads a `.env` file next to `compose.yaml`, so a setting written there applies
+  to *every* `docker compose` command, not just the one you typed it in front of.
+- **Stopping:** `docker compose stop` (and `down`) sends **SIGTERM** to each container's first
+  process (PID 1), waits a grace period, then sends SIGKILL: exit code **137** in `docker
+  compose ps -a` means "had to be killed". A program running as PID 1 must handle SIGTERM
+  itself; Linkly's worker does, so it finishes the batch in hand and exits 0.
 - **YAML anchors:** `x-app-env: &app-env` defines the shared database and Redis settings once;
   `<<: *app-env` reuses them.
 
@@ -33,7 +39,13 @@ docker compose ps                       # five services, the API and web "(healt
 docker compose logs -f worker           # leave this running while you click links (Ctrl+C to stop)
 ```
 
-Open http://localhost:8080. If 8080 is taken on your machine: `LINKLY_PORT=9090 docker compose up -d --build --wait`.
+Open http://localhost:8080. If 8080 is taken on your machine, put the port in `.env` so every
+later command uses it too (the repo's `.gitignore` already keeps `.env` out of Git):
+
+```bash
+echo LINKLY_PORT=9090 > .env
+docker compose up -d --build --wait     # now on http://localhost:9090
+```
 
 Data survives:
 
@@ -44,8 +56,9 @@ docker compose up -d --wait
 ```
 
 And the stack checks itself. `smoke-test.sh` builds a throwaway copy and uses it like a person
-would: it shortens, redirects and counts, refuses bad input, restarts with the data kept, then
-deletes everything:
+would: it shortens, redirects and counts, refuses bad input, restarts with the data kept, checks
+the worker stops cleanly, then deletes everything. It uses its own project name and port
+(18080), so it runs fine next to your stack:
 
 ```bash
 ./smoke-test.sh            # ... SMOKE TEST PASSED

@@ -61,8 +61,9 @@ The worker's Dockerfile (`app/linkly/worker/Dockerfile`) has exactly the same sh
 - [ ] Build the worker image and run its tests the same way
 - [ ] Explain what the HEALTHCHECK line adds
 
-Hint: after starting a container from `linkly-api`, `docker ps` shows `(health: starting)`
-and then `(healthy)` in the STATUS column.
+Hint: start one on lesson 2's network (it needs its database settings, or it exits at once):
+`docker run -d --name api --network linkly-net -e DATABASE_URL=postgresql://linkly:linkly@postgres:5432/linkly -e REDIS_URL=redis://redis:6379/0 linkly-api`.
+`docker ps` shows `(health: starting)`, then `(healthy)` in the STATUS column. `docker rm -f api` when done.
 
 ## Check yourself
 

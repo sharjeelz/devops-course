@@ -1,5 +1,5 @@
 # Linkly, all five parts, one command:   docker compose up -d --build --wait
-# Then open http://localhost:8080  (LINKLY_PORT=9090 docker compose up ... if 8080 is taken)
+# Then open http://localhost:8080  (8080 taken? put LINKLY_PORT=9090 in a .env file next to this one)
 name: linkly
 
 x-app-env: &app-env

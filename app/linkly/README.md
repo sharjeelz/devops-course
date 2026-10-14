@@ -44,7 +44,7 @@ With Docker (Module 1 onwards), from this folder:
 
 ```bash
 docker compose up -d --build --wait      # build and start all five parts, wait until healthy
-# open http://localhost:8080             # LINKLY_PORT=9090 docker compose up ... if 8080 is taken
+# open http://localhost:8080             # 8080 taken? echo LINKLY_PORT=9090 > .env  (applies to every command)
 docker compose logs -f worker            # watch clicks being counted
 docker compose down                      # stop (data kept in the pgdata volume)
 docker compose down -v                   # stop and delete the data

@@ -43,6 +43,8 @@ docker run -d --name worker --network linkly-net $APP_ENV linkly-worker
 docker run -d --name web    --network linkly-net -p 8080:8080 linkly-web
 ```
 
+(Port 8080 busy? `-p 9090:8080` publishes it on 9090 instead: the left side is yours to choose.)
+
 Open http://localhost:8080 and use it: shorten, click, refresh the count. It's the same app
 as Module 0, and nothing is installed on your machine except Docker.
 
