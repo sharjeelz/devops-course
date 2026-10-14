@@ -1,5 +1,7 @@
 import logging
 import os
+import signal
+import threading
 import time
 from collections import Counter
 from typing import Callable
@@ -8,7 +10,7 @@ import psycopg
 import redis
 
 log = logging.getLogger("linkly-worker")
-BLOCK_SECONDS = 5  # how long one wait for a click lasts
+BLOCK_SECONDS = 2  # how long one wait for a click lasts; also how long a stop request can take to be noticed
 
 
 def connect(url: str) -> redis.Redis:
@@ -50,6 +52,24 @@ def step(r: redis.Redis, add: Callable[[str, int], None], sleep: Callable[[float
         return 0
 
 
+def stop_on_sigterm(stop: threading.Event):
+    """`docker stop` sends SIGTERM to the container's first process (PID 1). Python ignores it there
+    unless we handle it, and Docker then kills the worker after a grace period (exit code 137)."""
+
+    def handle(signum, frame) -> None:
+        log.info("stop requested; finishing the current batch")
+        stop.set()
+
+    return handle
+
+
+def serve(r: redis.Redis, add: Callable[[str, int], None], stop: threading.Event) -> None:
+    """Work until asked to stop. A batch already taken off the queue is always saved (or put back) first."""
+    while not stop.is_set():
+        if n := step(r, add):
+            log.info("counted %d clicks", n)
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     r = connect(os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
@@ -59,10 +79,11 @@ def main() -> None:
         with psycopg.connect(dsn, autocommit=True) as c:
             c.execute("UPDATE links SET clicks = clicks + %s WHERE code = %s", (n, code))
 
+    stop = threading.Event()
+    signal.signal(signal.SIGTERM, stop_on_sigterm(stop))
     log.info("worker started")
-    while True:
-        if n := step(r, add):
-            log.info("counted %d clicks", n)
+    serve(r, add, stop)
+    log.info("worker stopped")
 
 
 if __name__ == "__main__":

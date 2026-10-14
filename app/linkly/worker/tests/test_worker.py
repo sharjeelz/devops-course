@@ -63,3 +63,26 @@ def test_step_puts_clicks_back_when_postgres_is_down():
     assert step(r, postgres_down, sleep=waited.append) == 0
     assert waited == [2]
     assert sorted(r.lrange("clicks", 0, -1)) == ["aaaaaaa", "aaaaaaa", "bbbbbbb"]
+
+
+def test_serve_stops_when_asked():
+    # Docker stops a container by sending SIGTERM to PID 1; the worker must notice and exit, not be killed.
+    import threading
+
+    from linkly_worker.main import serve, stop_on_sigterm
+
+    stop = threading.Event()
+    stop_on_sigterm(stop)(15, None)
+    assert stop.is_set()
+
+    r = fakeredis.FakeRedis(decode_responses=True)
+    r.lpush("clicks", "aaaaaaa")
+    seen = []
+
+    def add(code, n):
+        seen.append((code, n))
+        stop.set()
+
+    stop.clear()
+    serve(r, add, stop)  # returns once stop is set, after finishing the batch in hand
+    assert seen == [("aaaaaaa", 1)]

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Builds and starts Linkly with Docker Compose, uses it through nginx like a person would,
 # restarts it to prove the data survives, then removes everything it created.
-# Usage: ./smoke-test.sh            (LINKLY_PORT=9090 ./smoke-test.sh if 8080 is taken)
+# Usage: ./smoke-test.sh   It uses its own port (18080) and project name, so it doesn't clash with
+# a Linkly you already have running; LINKLY_PORT=19090 ./smoke-test.sh if 18080 is taken.
 set -euo pipefail
 cd "$(dirname "$0")"
-export LINKLY_PORT="${LINKLY_PORT:-8080}"
+export LINKLY_PORT="${LINKLY_PORT:-18080}"
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-linkly-smoke}"
 base="http://localhost:${LINKLY_PORT}"
 
@@ -47,5 +48,12 @@ echo "== data survives a restart (down without -v)"
 docker compose down >/dev/null 2>&1 || fail "down failed"
 docker compose up -d --wait >/dev/null 2>&1 || fail "restart failed"
 [ "$(curl -s -o /dev/null -w '%{http_code}' "$base/r/$code")" = "307" ] || fail "link lost after restart"
+
+echo "== the worker stops cleanly when asked (SIGTERM, not killed)"
+start=$(date +%s)
+docker compose stop worker >/dev/null 2>&1 || fail "stopping the worker failed"
+took=$(( $(date +%s) - start ))
+exit_code=$(docker inspect -f '{{.State.ExitCode}}' "$(docker compose ps -aq worker)")
+[ "$exit_code" = "0" ] && [ "$took" -le 6 ] || fail "worker took ${took}s to stop and exited with $exit_code (137 = killed)"
 
 echo "SMOKE TEST PASSED"
