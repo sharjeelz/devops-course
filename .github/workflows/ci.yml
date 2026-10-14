@@ -1,0 +1,93 @@
+# Linkly's pipeline (module 2): lint → test → smoke → publish.
+# Runs on pull requests and on pushes to main; publishes images only on pushes (main and v* tags).
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/ruff-action@v3
+        with:
+          version: "0.17.0"
+          src: app/linkly
+
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        service: [api, worker]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the test stage
+        uses: docker/build-push-action@v7
+        with:
+          context: app/linkly/${{ matrix.service }}
+          target: test
+          load: true
+          tags: linkly-${{ matrix.service }}:test
+          cache-from: type=gha,scope=${{ matrix.service }}-test
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}-test
+      - name: Run the tests
+        run: docker run --rm linkly-${{ matrix.service }}:test
+
+  smoke:
+    needs: [lint, test]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build, start and use the whole stack
+        run: app/linkly/smoke-test.sh
+
+  publish:
+    needs: smoke
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [api, worker, web]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Image name (registry names must be lowercase)
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/linkly-${{ matrix.service }}" >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=main,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v7
+        with:
+          context: app/linkly/${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
