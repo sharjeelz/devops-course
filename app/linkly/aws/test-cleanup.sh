@@ -14,9 +14,21 @@ cat > "$tmp/bin/aws" <<'FAKE'
 #!/usr/bin/env bash
 echo "$*" >> "$LOG"
 full() { [ "$STATE" = full ]; }
+# Like the real CLI: "not found" is exit 254 plus an error naming NotFound/NoSuchEntity.
+notfound() { echo "An error occurred ($1) when calling the $2 operation: not found" >&2; exit 254; }
+# STATE=expired: the SSO session has run out, every call fails.
+[ "$STATE" = expired ] && { echo "Error when retrieving token from sso: Token has expired and refresh failed" >&2; exit 255; }
+# STATE=listfail: signed in, but listing instances is denied.
+[ "$STATE" = listfail ] && [ "$1 $2" = "ec2 describe-instances" ] && { echo "An error occurred (UnauthorizedOperation)" >&2; exit 254; }
+# STATE=iamdenied: the IAM checks fail with AccessDenied, which is not "it doesn't exist".
+[ "$STATE" = iamdenied ] && [ "$1" = iam ] && { echo "An error occurred (AccessDenied) when calling the GetRole operation" >&2; exit 254; }
 case "$1 $2" in
-  "ec2 describe-instances")          full && echo "i-0aaa" ;;
-  "ec2 describe-key-pairs")          full || exit 254 ;;
+  "sts get-caller-identity")         echo "123456789012" ;;
+  "ec2 describe-instances")
+    full && echo "i-0aaa"
+    # STATE=shutting: an instance someone already terminated by hand, still shutting down.
+    [ "$STATE" = shutting ] && [[ "$*" == *shutting-down* ]] && echo "i-0bbb" ;;
+  "ec2 describe-key-pairs")          full || notfound InvalidKeyPair.NotFound DescribeKeyPairs ;;
   "ec2 describe-vpcs")               full && echo "vpc-0aaa" ;;
   "ec2 describe-security-groups")    full && echo "sg-0aaa" ;;
   "ec2 describe-subnets")            full && echo "subnet-0aaa" ;;
@@ -28,10 +40,10 @@ case "$1 $2" in
     if [ "$n" = 0 ]; then echo '{"Objects": [{"Key": "a.sql.gz", "VersionId": "v1"}]}'; else echo '{"Objects": []}'; fi ;;
   "ecr describe-repositories")       full && printf 'linkly-api\tarn:aws:ecr:eu-central-1:123456789012:repository/linkly-api\n' ;;
   "ecr list-tags-for-resource")      echo "linkly-course" ;;
-  "iam get-role")                    full || exit 254 ;;
+  "iam get-role")                    full || notfound NoSuchEntity GetRole ;;
   "iam list-role-policies")          echo "linkly-course-s3-backup" ;;
   "iam list-attached-role-policies") echo "" ;;
-  "iam get-instance-profile")        full || exit 254 ;;
+  "iam get-instance-profile")        full || notfound NoSuchEntity GetInstanceProfile ;;
 esac
 exit 0
 FAKE
@@ -67,5 +79,18 @@ check "and makes no delete calls" bash -c "! grep -Eq ' (delete|terminate|detach
 
 # 4. AWS_REGION is required (never guess where to delete things).
 check "refuses to run without AWS_REGION" bash -c "! env -u AWS_REGION '$here/cleanup.sh' >/dev/null 2>&1"
+
+# 5. Failures are failures: never "Done" when AWS couldn't be asked (the learner would keep paying).
+for state in expired listfail iamdenied; do
+  : > "$LOG"; rm -f "$COUNT"
+  check "$state: exits non-zero" bash -c "! STATE=$state '$here/cleanup.sh' > '$tmp/out' 2>&1"
+  check "$state: doesn't claim it's done" bash -c "! grep -q '^Done' '$tmp/out'"
+done
+check "expired: says to sign in again" bash -c "STATE=expired '$here/cleanup.sh' 2>&1 | grep -q 'aws sso login'"
+
+# 6. An instance already shutting down is waited for, or its security group can't be deleted yet.
+: > "$LOG"; rm -f "$COUNT"
+STATE=shutting "$here/cleanup.sh" > "$tmp/out" 2>&1 || true
+check "waits for an instance that's already shutting down" grep -q "wait instance-terminated --instance-ids i-0bbb" "$LOG"
 
 if [ "$fails" -eq 0 ]; then echo "all cleanup tests passed"; else echo "$fails cleanup test(s) failed"; exit 1; fi
