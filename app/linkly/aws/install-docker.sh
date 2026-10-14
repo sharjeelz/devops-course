@@ -7,8 +7,9 @@ set -euo pipefail
 COMPOSE_VERSION="v5.6.0"
 
 [ "$(id -u)" = 0 ] || { echo "run me with sudo" >&2; exit 1; }
-grep -q '^ID="amzn"' /etc/os-release && grep -q '^VERSION_ID="2023"' /etc/os-release \
-  || { echo "this script is for Amazon Linux 2023" >&2; exit 1; }
+if ! grep -q '^ID="amzn"' /etc/os-release || ! grep -q '^VERSION_ID="2023"' /etc/os-release; then
+  echo "this script is for Amazon Linux 2023" >&2; exit 1
+fi
 
 echo "== Docker"
 dnf install -y -q docker
