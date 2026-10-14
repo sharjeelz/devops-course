@@ -53,8 +53,29 @@ jobs:
       - name: Build, start and use the whole stack
         run: app/linkly/smoke-test.sh
 
+  kubernetes:
+    needs: [lint, test]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        deploy: [helm, kustomize]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install kind and Helm (pinned)
+        run: |
+          curl -fsSLo kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+          sudo install -m 0755 kind /usr/local/bin/kind && rm kind
+          curl -fsSL https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz | tar xz linux-amd64/helm
+          sudo install -m 0755 linux-amd64/helm /usr/local/bin/helm && rm -r linux-amd64
+          kind version && helm version --short && kubectl version --client
+      - name: Deploy Linkly to a throwaway kind cluster and use it
+        run: app/linkly/k8s-smoke-test.sh
+        env:
+          DEPLOY: ${{ matrix.deploy }}
+
   publish:
-    needs: smoke
+    needs: [smoke, kubernetes]
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:

@@ -3,6 +3,8 @@
 # uses Linkly through its front door like a person would, checks Kubernetes keeps it running
 # (pods replaced, data kept), then deletes the cluster.
 # Usage: ./k8s-smoke-test.sh     (own cluster name and port; LINKLY_PORT=18099 if 18090 is taken)
+#        DEPLOY=helm ./k8s-smoke-test.sh       deploy with the Helm chart (module 4)
+#        DEPLOY=kustomize ./k8s-smoke-test.sh  deploy with the Kustomize dev overlay (module 4)
 set -euo pipefail
 cd "$(dirname "$0")"
 cluster="${CLUSTER:-linkly-smoke}"
@@ -13,7 +15,19 @@ k() { kubectl --context "kind-${cluster}" -n linkly "$@"; }
 [ "$cluster" != "linkly" ] || { echo "Refusing CLUSTER=linkly: that's your lesson cluster. Pick another name." >&2; exit 2; }
 created=0
 
-fail() { echo "K8S SMOKE TEST FAILED: $*" >&2; k get pods -o wide >&2 || true; k get events --sort-by=.lastTimestamp 2>/dev/null | tail -15 >&2 || true; exit 1; }
+fail() {
+  echo "K8S SMOKE TEST FAILED: $*" >&2
+  k get pods -o wide >&2 || true
+  k get events --sort-by=.lastTimestamp 2>/dev/null | tail -15 >&2 || true
+  # Why did a container restart? Its previous run's last words, and how it ended.
+  for p in $(k get pods -o name 2>/dev/null); do
+    reason=$(k get "$p" -o jsonpath='{.status.containerStatuses[0].lastState.terminated.reason} {.status.containerStatuses[0].lastState.terminated.exitCode}' 2>/dev/null) || true
+    [ -n "${reason// /}" ] || continue
+    echo "--- $p last ended: $reason" >&2
+    k logs "$p" --previous --tail 15 >&2 2>/dev/null || true
+  done
+  exit 1
+}
 # All scratch files live in one private directory (mktemp -d: created atomically, only we can write to it).
 tmp=$(mktemp -d)
 cfg="$tmp/kind-config.yaml"
@@ -33,7 +47,12 @@ for svc in api worker web; do
 done
 
 echo "== apply and wait"
-kubectl --context "kind-${cluster}" apply -f k8s/ >/dev/null || fail "apply"
+case "${DEPLOY:-plain}" in
+  plain)     kubectl --context "kind-${cluster}" apply -f k8s/ >/dev/null || fail "apply" ;;
+  kustomize) kubectl --context "kind-${cluster}" apply -k kustomize/dev >/dev/null || fail "apply -k" ;;
+  helm)      helm --kube-context "kind-${cluster}" install linkly helm/linkly -n linkly --create-namespace >/dev/null || fail "helm install" ;;
+  *)         fail "DEPLOY must be plain, kustomize or helm" ;;
+esac
 k rollout status statefulset/postgres --timeout=180s >/dev/null || fail "postgres not ready"
 for d in redis api worker web; do k rollout status "deployment/$d" --timeout=180s >/dev/null || fail "$d not ready"; done
 
