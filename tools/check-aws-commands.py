@@ -60,7 +60,7 @@ def substitute(cmd: str) -> str:
     cmd = "".join(out)
     cmd = re.sub(r"\$\{(\w+)[^}]*\}", lambda m: dummy(m.group(1)), cmd)
     cmd = re.sub(r"\$(\w+)", lambda m: dummy(m.group(1)), cmd)
-    cmd = re.sub(r"<[^<>\s]+>", "x", cmd)
+    cmd = re.sub(r"<[^<>\n]+>", "x", cmd)   # <placeholders>, even with spaces: <a build>
     return cmd
 
 
@@ -75,6 +75,8 @@ def cut_at_shell_operator(cmd: str) -> str:
         if ch in "'\"":
             quote = ch
         elif ch in "|>;)" or cmd.startswith("&&", i):
+            return cmd[:i].strip()
+        elif ch == "#" and (i == 0 or cmd[i - 1].isspace()):  # a trailing comment
             return cmd[:i].strip()
     return cmd.strip()
 
@@ -97,6 +99,8 @@ def commands_in(path: str):
     for line in logical_lines(text):
         if line.lstrip().startswith("#"):
             continue
+        if path.endswith(".md"):  # lessons' <placeholders> contain ">", which isn't a redirect
+            line = re.sub(r"<[^<>\n]+>", "x", line)
         for m in re.finditer(r"(?<![\w-])(aws|run) (" + SERVICES + r" [\w-]+.*)", line):
             if m.group(1) == "run" and not path.endswith(".sh"):
                 continue
@@ -116,7 +120,8 @@ def check(cmd: str, env: dict) -> tuple[bool, str]:
         if a.startswith("file://") and not os.path.exists(a[len("file://"):]):
             return False, f"missing file {a}"
     argv += ["--endpoint-url", "http://127.0.0.1:9", "--cli-connect-timeout", "1", "--cli-read-timeout", "1"]
-    r = subprocess.run(argv, capture_output=True, text=True, env=env, timeout=60, shell=os.name == "nt")
+    r = subprocess.run(argv, capture_output=True, text=True, env=env, timeout=60, shell=os.name == "nt",
+                       stdin=subprocess.DEVNULL)  # "aws s3 cp - ..." reads stdin: give it none
     out = (r.stderr + r.stdout).strip()
     if any(s in out for s in CONNECT_FAILED):
         return True, "valid"
