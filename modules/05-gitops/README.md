@@ -24,8 +24,11 @@ nobody running a deploy command.
 2. **Point them at your fork.** In `app/linkly/gitops/application.yaml`, change `repoURL` to
    `https://github.com/<you>/devops-course.git`. In `app/linkly/gitops/values.yaml`, change
    `prefix` to `ghcr.io/<you>/` (all lowercase), and `tag` to one of your published `sha-` tags.
-3. **Commit to `main` through a pull request** (your checks run), then create the `deploy` branch
-   once: `git push origin main:deploy`. Argo CD deploys `deploy`, and CI keeps it up to date.
+3. **Commit to `main` through a pull request** (your checks run) and merge it. That merge is a
+   push to `main`, so the pipeline runs, and its new **deploy** job creates the `deploy` branch for
+   you (from the commit it just built). Wait for it, then check:
+   `git fetch origin && git log --oneline -2 origin/deploy`. From then on CI keeps `deploy` up to
+   date, and Argo CD deploys it.
 4. **A cluster:** `kind create cluster --name linkly --config app/linkly/kind-config.yaml`. This
    time there's nothing to build or load: the cluster pulls your images from GHCR (they're public).
 

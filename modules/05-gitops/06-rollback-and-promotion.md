@@ -16,8 +16,16 @@ is a commit too.
   that a rollback happened, and why.
 - **Why not Argo CD's own "rollback" button?** With automated sync on, Argo CD refuses it,
   because the next sync would immediately re-apply what Git says. Git stays the truth.
-- **The next good build moves on again:** after you fix `main`, CI bumps `deploy` to the new
-  build as usual.
+- **A rollback holds only until the next successful push to `main`.** *Any* merge (even a docs
+  change) builds a new image from `main`, which still contains the bad code, and rolls `deploy`
+  forward to it. So roll back to stop the damage, then fix `main` quickly (or revert the bad
+  change on `main` too).
+- **Reverting a `deploy: linkly sha-…` commit restores only the image tag.** If the same run also
+  merged chart changes (the `deploy: merge main` commit just before it), those stay, and the old
+  image runs with the new chart. Usually fine; if the chart change is the problem, revert it on `main`.
+- **Don't revert a `deploy: merge main` commit by hand.** It needs `git revert -m 1`, and
+  afterwards later merges of `main` won't bring those changes back (Git thinks they're already in).
+  Fix the chart on `main` instead.
 - **Promotion between environments:** add a second Application (say `linkly-prod`, in its own
   namespace or cluster) that reads its own values file (`app/linkly/gitops/values-prod.yaml`).
   Promoting is copying a tested tag into that file through a pull request, reviewed and reversible.
@@ -58,7 +66,17 @@ It's recorded (who, when, why), reviewable, and it actually sticks: Argo CD woul
 
 </details>
 
-2. How would you promote a version from dev to prod?
+2. You rolled back, then a teammate merges a README change to `main`. What happens?
+
+<details><summary>Answer</summary>
+
+CI builds and publishes a new image from `main` (which still has the bad code) and the deploy job
+moves `deploy` to it, so the problem comes back. A rollback buys time; the real fix (or a revert)
+has to land on `main`.
+
+</details>
+
+3. How would you promote a version from dev to prod?
 
 <details><summary>Answer</summary>
 

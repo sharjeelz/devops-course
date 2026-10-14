@@ -62,7 +62,26 @@ last_bump=$(git log --format=%H --grep '^deploy: linkly sha-bbbbbbb' -1)
 g revert --no-edit "$last_bump" >/dev/null && git push -q origin deploy
 check "reverting the bump commit puts the previous tag back" [ "$(tag_on_deploy)" = sha-ccccccc ]
 
-# 6. An invalid tag is refused before anything happens.
+# 6. A fix on main to values.yaml (e.g. the image prefix) reaches deploy: deploy is main + the tag.
+git switch -q main && git pull -q --ff-only origin main
+sed -i -E 's#^(  prefix: ).*#\1ghcr.io/newowner/#' app/linkly/gitops/values.yaml
+g commit -q -am "fix prefix" && git push -q origin main
+app/linkly/gitops/bump-image.sh sha-ddddddd >/dev/null
+check "a prefix fix on main reaches deploy" grep -q "^  prefix: ghcr.io/newowner/" <(on_deploy app/linkly/gitops/values.yaml)
+check "and deploy keeps its own tag" [ "$(tag_on_deploy)" = sha-ddddddd ]
+
+# 7. CI deploys the commit it built, not whatever main is by now (SOURCE_REF).
+git switch -q main
+built=$(git rev-parse HEAD)
+echo "untested chart" > CHART && g commit -q -am "untested change" && git push -q origin main
+SOURCE_REF="$built" app/linkly/gitops/bump-image.sh sha-eeeeeee >/dev/null
+check "merges the built commit, not a newer main" [ "$(on_deploy CHART)" = "chart v2" ]
+
+# 8. If the tag line can't be found, fail loudly instead of reporting success.
+git switch -q main && sed -i -E 's/^  tag:/    tag:/' app/linkly/gitops/values.yaml && g commit -q -am "reformat" && git push -q origin main
+check "fails when it can't set the tag" bash -c '! app/linkly/gitops/bump-image.sh sha-fffffff >/dev/null 2>&1'
+
+# 9. An invalid tag is refused before anything happens.
 check "refuses an invalid tag" bash -c '! app/linkly/gitops/bump-image.sh "bad tag;rm" >/dev/null 2>&1'
 
 [ "$fails" -eq 0 ] && echo "all bump-image tests passed" || { echo "$fails bump-image test(s) failed"; exit 1; }

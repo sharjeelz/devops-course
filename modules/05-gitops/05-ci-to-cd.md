@@ -15,20 +15,25 @@ The whole loop:
 1. You merge a change into `main`.
 2. CI runs lint, test, smoke and kubernetes (Module 4), then publishes images tagged `sha-<commit>`.
 3. The **deploy** job runs `app/linkly/gitops/bump-image.sh sha-<commit>`, which:
-   - fetches `main` and `deploy`, and merges `main` into `deploy` (so chart changes arrive too);
+   - merges **the commit that was just built and tested** (not whatever `main` is by now) into
+     `deploy`, so chart changes arrive together with their image. Where `main` and `deploy`
+     disagree, `main` wins: `deploy` is "`main` plus the tag", so a fix you make on `main` (say,
+     to `values.yaml`'s image prefix) always reaches the cluster;
    - sets `image.tag` in `app/linkly/gitops/values.yaml` and commits `deploy: linkly sha-<commit>`
      as github-actions[bot];
    - pushes `deploy`. If `deploy` moved in the meantime, it starts again from the new tip
      (never a force push). If nothing changed, it does nothing.
 4. Argo CD sees the new commit on `deploy` (within about three minutes, or on Refresh) and rolls
-   the api and worker to the new image.
+   the api, worker and web to the new images.
 
-**Least privilege:** only the deploy job may write to the repository (`contents: write`), and it
-only writes to `deploy`. Nothing in CI holds credentials for your cluster.
+**Least privilege:** only the deploy job gets write access to the repository (`contents: write`);
+every other job can only read. The script only touches `deploy`, although the token itself could
+write to any unprotected branch, so it's worth adding a ruleset for `deploy` that blocks force
+pushes and deletion. Nothing in CI holds credentials for your cluster.
 
 The bump script has its own test, which runs against a throwaway Git repo standing in for GitHub.
-It covers a first run with no `deploy` branch, a repeated tag, `main`'s changes arriving, a
-push race and a rollback by revert:
+It covers a first run with no `deploy` branch, a repeated tag, `main`'s changes arriving (and
+winning), merging the built commit rather than a newer `main`, a push race and a rollback by revert:
 
 ```bash
 app/linkly/gitops/test-bump-image.sh      # ... all bump-image tests passed

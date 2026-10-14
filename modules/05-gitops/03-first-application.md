@@ -66,6 +66,6 @@ an image can't be pulled). The problem is in what you committed, not in the sync
 
 `deploy` records which image actually runs; CI updates it after every good build of `main`.
 Keeping that out of `main` means CI never pushes to the protected branch, and `deploy`'s history
-is a clean log of every deployment.
+is a log of every deployment (each new image, and each merge of `main` that came with it).
 
 </details>

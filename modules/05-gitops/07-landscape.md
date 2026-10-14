@@ -48,7 +48,8 @@ spec:
     spec:
       chart: ./app/linkly/helm/linkly
       sourceRef: { kind: GitRepository, name: linkly, namespace: flux-system }
-  valuesFiles: [./app/linkly/gitops/values.yaml]
+      valuesFiles: [./app/linkly/gitops/values.yaml]
+      reconcileStrategy: Revision    # redeploy on every new commit, not only when Chart.yaml's version changes
 ```
 
 ## Lab
