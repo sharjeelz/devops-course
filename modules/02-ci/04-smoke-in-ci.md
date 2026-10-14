@@ -15,8 +15,11 @@ before anything is published.
   have passed. GitHub draws the graph on the run's summary page.
 - **Runners have Docker and Compose,** so `smoke-test.sh` runs unchanged. It uses its own
   project name and port (18080), so nothing on the runner gets in its way.
-- **`concurrency`:** when you push twice in a row, the first run is now pointless.
-  `cancel-in-progress: true` stops it, so runners aren't wasted and an old run can't finish last.
+- **`concurrency`:** runs for the same branch form a group. When you push twice to a work
+  branch, the first run is pointless, and cancelling it saves runners. On `main` we *don't*
+  cancel: lesson 5's publish must never be cut off halfway (two images new, one old). So main's
+  runs queue up and finish in order. That's what
+  `cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}` says.
 
 ## Example
 
@@ -25,7 +28,7 @@ Add to `ci.yml`, at the top level (next to `permissions:`):
 ```yaml
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 ```
 
 and a third job:
@@ -68,7 +71,7 @@ and the quick failure is easier to read.
 
 <details><summary>Answer</summary>
 
-Runs for outdated commits using up runners, and, once publishing exists, an older run
-finishing after a newer one and publishing stale images last.
+Runs for outdated commits on a work branch using up runners. (On `main` runs wait in line
+instead, so a half-finished publish can't happen.)
 
 </details>

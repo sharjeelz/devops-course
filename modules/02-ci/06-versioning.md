@@ -18,14 +18,18 @@ to a commit, and releases to a version number, and the running app can tell you 
 | Pushed | Image tags |
 |---|---|
 | a commit to `main` | `main`, `sha-<7 chars>` |
-| the tag `v0.2.0` | `0.2.0`, `0.2`, `sha-<7 chars>` |
+| the tag `v0.2.0` | `0.2.0`, `0.2`, `sha-<7 chars>` (no `latest`) |
 
   `sha-` points at the exact commit, forever. `0.2` follows the newest 0.2.x, for people who
   want fixes automatically.
 - **Why not `latest`?** It moves silently, so two servers "running latest" can be running
   different code, and a rollback has nothing to roll back *to*.
+- **No `latest` on purpose:** metadata-action adds `latest` to every release unless told not
+  to; our workflow says `flavor: latest=false`.
 - **Version at runtime:** the API's Dockerfile takes `ARG VERSION` and sets `LINKLY_VERSION`.
-  CI passes the version it worked out, and `/healthz` reports it.
+  CI passes the version it worked out: `0.2.0` for a release, and the `sha-<7 chars>` tag for
+  a build from `main` (`type=sha,priority=300` makes the commit win over the word "main").
+  `/healthz` reports it, so a running container always tells you its exact source.
 
 ## Example
 

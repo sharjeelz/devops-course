@@ -54,9 +54,11 @@ smoke:
   stage: smoke
   image: docker:27
   services: [docker:27-dind]
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"     # the docker image then finds the dind daemon by itself
   script:
     - apk add --no-cache bash curl
-    - app/linkly/smoke-test.sh
+    - LINKLY_HOST=docker app/linkly/smoke-test.sh   # with dind, published ports live on the "docker" host
 ```
 
 **Jenkins** (`Jenkinsfile`):
@@ -102,6 +104,7 @@ special hardware (GPUs, ARM machines), or when rules say code can't run on a ven
 
 Almost everything conceptual: triggers, stages and jobs, parallelism, caching, artifacts,
 secrets, least-privilege tokens, and gating publishing on tests. The scripts the jobs run
-(our Docker builds, the smoke test) move over unchanged.
+move over almost unchanged: the Docker builds as they are, the smoke test with one setting
+(`LINKLY_HOST=docker` when Docker runs as a separate "dind" service).
 
 </details>

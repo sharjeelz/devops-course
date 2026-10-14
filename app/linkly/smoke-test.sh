@@ -3,11 +3,12 @@
 # restarts it to prove the data survives, then removes everything it created.
 # Usage: ./smoke-test.sh   It uses its own port (18080) and project name, so it doesn't clash with
 # a Linkly you already have running; LINKLY_PORT=19090 ./smoke-test.sh if 18080 is taken.
+# LINKLY_HOST: where the published port is reachable (default localhost; "docker" with Docker-in-Docker).
 set -euo pipefail
 cd "$(dirname "$0")"
 export LINKLY_PORT="${LINKLY_PORT:-18080}"
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-linkly-smoke}"
-base="http://localhost:${LINKLY_PORT}"
+base="http://${LINKLY_HOST:-localhost}:${LINKLY_PORT}"
 
 fail() { echo "SMOKE TEST FAILED: $*" >&2; docker compose logs --tail 30 >&2 || true; exit 1; }
 cleanup() { docker compose down -v --remove-orphans >/dev/null 2>&1 || true; }

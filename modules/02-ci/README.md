@@ -11,8 +11,22 @@ passes, publish Linkly's images to a registry with versions you can trace.
 
 - **Turn on Actions in your fork.** Forks start with workflows switched off: open your fork's
   **Actions** tab and click **"I understand my workflows, go ahead and enable them"**.
-- **Start from the checkpoint:** `git switch -c module-2 checkpoint/02-ci` gives you Linkly as
-  Module 1 left it, with no workflow yet. You'll write `.github/workflows/ci.yml` lesson by lesson.
+- **Make your fork's `main` *your* Linkly.** Your fork's `main` is a copy of the finished
+  course, with this module's answers already in it. From here on, `main` in your fork should be
+  the Linkly *you* build, because CI publishes from `main` and later modules deploy from it.
+  Replace it with the checkpoint:
+
+  ```bash
+  git fetch origin
+  git switch -c module-2 origin/checkpoint/02-ci   # Linkly as Module 1 left it, no workflow yet
+  git push --force origin module-2:main             # your fork's main is now your own Linkly
+  ```
+
+  This only rewrites `main` in **your fork**: the course itself stays untouched upstream, and you
+  keep reading the lessons there. You'll write `.github/workflows/ci.yml` lesson by lesson on
+  `module-2` and merge into your `main` through pull requests.
+- **Pull requests go to *your* fork.** On GitHub's *Open a pull request* page, set
+  **base repository** to `<you>/devops-course` and base `main`. It defaults to the course repo.
 
 **Cost:** Actions is free for public repositories. Private repositories use a monthly allowance
 of free minutes, more than enough for this module.

@@ -60,10 +60,11 @@ and the fourth job:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE }}
+          flavor: latest=false
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha
+            type=sha,priority=300
             type=raw,value=main,enable={{is_default_branch}}
       - uses: docker/build-push-action@v7
         with:
@@ -77,10 +78,11 @@ and the fourth job:
 ```
 
 `${GITHUB_REPOSITORY_OWNER,,}` is bash for "lowercased". The `meta` step works out the tags;
-lesson 6 explains them.
+lesson 6 explains them, including why `flavor: latest=false` is there.
 
-Merge your branch into `main` in your fork (through a pull request, so your required checks
-run). The push to `main` runs all four jobs; `publish` pushes three images. Find them on your
+Open a pull request from `module-2` into **your fork's** `main` (base repository
+`<you>/devops-course`, see the module README) and merge it once the checks pass. The merge is a
+push to `main`, so all four jobs run and `publish` pushes three images. Find them on your
 GitHub profile under **Packages**. New packages are private; to pull one without logging in,
 open its **Package settings** and change the visibility to public. Then:
 
