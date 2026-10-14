@@ -19,6 +19,7 @@ CMD ["python", "-m", "pytest", "-q"]
 FROM base AS runtime
 COPY --from=deps /install /usr/local
 COPY linkly_worker ./linkly_worker
+# A numeric USER lets Kubernetes verify runAsNonRoot (it can't check a user name).
 RUN useradd --system --uid 10001 --no-create-home linkly
-USER linkly
+USER 10001
 CMD ["python", "-m", "linkly_worker.main"]
