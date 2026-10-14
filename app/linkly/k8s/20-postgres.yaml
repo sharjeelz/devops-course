@@ -1,0 +1,59 @@
+# Postgres as a StatefulSet: a stable name (postgres-0) and its own disk (a PersistentVolumeClaim)
+# that outlives the pod.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: linkly
+spec:
+  clusterIP: None            # "headless": the name resolves straight to the pod
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: linkly
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          envFrom:
+            - secretRef:
+                name: linkly-db
+          env:
+            - name: PGDATA                       # a subfolder: a new volume's root has lost+found in it
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "linkly", "-d", "linkly"]
+            periodSeconds: 3
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

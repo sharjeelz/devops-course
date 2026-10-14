@@ -1,0 +1,23 @@
+# Settings every Linkly part reads. The ConfigMap holds plain settings; the Secret holds the
+# database credentials. A Secret is only base64-encoded, not encrypted: fine for a local cluster,
+# never for real credentials in Git (Module 8 fixes that).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linkly-config
+  namespace: linkly
+data:
+  REDIS_URL: redis://redis:6379/0
+  BASE_URL: http://localhost:8080
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: linkly-db
+  namespace: linkly
+type: Opaque
+stringData:
+  POSTGRES_USER: linkly
+  POSTGRES_PASSWORD: linkly
+  POSTGRES_DB: linkly
+  DATABASE_URL: postgresql://linkly:linkly@postgres:5432/linkly

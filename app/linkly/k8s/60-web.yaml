@@ -1,0 +1,43 @@
+# The front door. A NodePort Service: kind maps node port 30080 to localhost:8080 (kind-config.yaml).
+# Lesson 7 puts the Gateway API in front instead.
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: linkly
+spec:
+  type: NodePort
+  selector:
+    app: web
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: linkly
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: linkly-web:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /, port: 8080 }
+            periodSeconds: 3
+          resources:
+            requests: { cpu: 25m, memory: 32Mi }
+            limits: { memory: 128Mi }
