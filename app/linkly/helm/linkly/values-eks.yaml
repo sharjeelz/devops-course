@@ -1,0 +1,33 @@
+# Linkly on EKS (module 8): images from GHCR, the database on RDS (credentials from AWS Secrets
+# Manager through External Secrets), HTTPS with a Let's Encrypt certificate, and an autoscaled api.
+# The blanks come from `terraform output` in app/linkly/terraform/envs/eks and from your domain:
+#   helm install linkly app/linkly/helm/linkly -n linkly --create-namespace -f app/linkly/helm/linkly/values-eks.yaml \
+#     --set image.tag=sha-<commit> --set externalDatabase.host=<db_host> \
+#     --set externalDatabase.externalSecret.remoteKey=<db_secret_arn> \
+#     --set gateway.hostname=linkly.<your domain> --set baseUrl=https://linkly.<your domain>
+# (Module 8 lesson 4 does this through Argo CD instead, with app/linkly/gitops/values-eks.yaml.)
+image:
+  prefix: ghcr.io/sharjeelz/   # your own GHCR namespace
+  tag: ""                      # required: pin an exact build
+
+externalDatabase:
+  enabled: true
+  host: ""                     # required: terraform output -raw db_host
+  externalSecret:
+    secretStore: aws-secrets-manager   # app/linkly/eks/cluster-secret-store.yaml
+    remoteKey: ""              # required: terraform output -raw db_secret_arn
+
+api:
+  autoscaling:
+    enabled: true
+
+web:
+  service:
+    type: ClusterIP
+
+gateway:
+  enabled: true
+  hostname: ""                 # required: e.g. linkly.example.com, pointing at the load balancer
+  tls:
+    enabled: true
+    clusterIssuer: letsencrypt # app/linkly/eks/cluster-issuer.yaml

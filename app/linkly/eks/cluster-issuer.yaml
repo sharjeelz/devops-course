@@ -1,0 +1,24 @@
+# Let's Encrypt certificates for Gateways (module 8). cert-manager proves you control the name by
+# answering an HTTP-01 challenge through Linkly's Gateway, so the name must already point at the
+# load balancer. Put your email in (expiry warnings go there), then:
+#   kubectl apply -f app/linkly/eks/cluster-issuer.yaml
+# Try the staging server first (untrusted certificates, generous limits): swap the two server lines.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    email: you@example.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    # server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-account
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: linkly
+                namespace: linkly
+                kind: Gateway
+                sectionName: http

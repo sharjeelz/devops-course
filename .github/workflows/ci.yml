@@ -108,13 +108,59 @@ jobs:
           if helm template t helm/linkly -f helm/linkly/values-prod.yaml --set image.tag=sha-test; then
             echo "prod values rendered without a password" && exit 1; fi
           [ "$(helm template t helm/linkly -f helm/linkly/values-prod.yaml --set image.tag=sha-test --set-string postgres.password=ci | grep -c nodePort)" = 0 ]
+          helm/test-chart.sh
       - name: Deploy Linkly to a throwaway kind cluster and use it
         run: app/linkly/k8s-smoke-test.sh
         env:
           DEPLOY: ${{ matrix.deploy }}
 
+  eks-rehearsal:
+    needs: [lint, test]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install kind and Helm (pinned, checksums verified)
+        run: |
+          curl -fsSLo kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+          echo "aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d  kind" | sha256sum -c -
+          sudo install -m 0755 kind /usr/local/bin/kind && rm kind
+          curl -fsSLo helm.tar.gz https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz
+          echo "86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb  helm.tar.gz" | sha256sum -c -
+          tar xzf helm.tar.gz linux-amd64/helm
+          sudo install -m 0755 linux-amd64/helm /usr/local/bin/helm && rm -r linux-amd64 helm.tar.gz
+      - name: Rehearse the EKS setup on kind (External Secrets, cert-manager, HPA, password rotation)
+        run: app/linkly/eks/rehearse-on-kind.sh
+
+  # terraform plan against your real AWS account, with no stored keys (module 8, lesson 7).
+  # Runs only once you've set the repository variables; until then it's skipped.
+  terraform-plan:
+    needs: terraform
+    if: vars.AWS_PLAN_ROLE_ARN != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write   # lets the job ask GitHub for an OIDC token
+    steps:
+      - uses: actions/checkout@v7
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.16.6"
+          terraform_wrapper: false
+      - name: terraform plan (envs/eks)
+        working-directory: app/linkly/terraform/envs/eks
+        env:
+          TF_VAR_region: ${{ vars.AWS_REGION }}
+          TF_VAR_allowed_cidr: ${{ vars.TF_ALLOWED_CIDR }}
+        run: |
+          terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" -backend-config="region=${{ vars.AWS_REGION }}"
+          terraform plan -input=false -lock-timeout=2m -no-color
+
   publish:
-    needs: [smoke, kubernetes]
+    needs: [smoke, kubernetes, eks-rehearsal]
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:

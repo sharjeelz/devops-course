@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars (git ignores it) and fill in your own values.
+region       = "eu-central-1"
+allowed_cidr = "203.0.113.10/32" # your address: curl -s https://checkip.amazonaws.com
+# node_capacity_type = "SPOT"    # cheaper nodes that AWS may reclaim

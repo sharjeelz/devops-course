@@ -9,7 +9,8 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 echo "== terraform fmt"
 terraform fmt -recursive -check || fail "run: terraform fmt -recursive app/linkly/terraform"
 
-for dir in modules/network modules/backups modules/server envs/dev bootstrap; do
+for dir in modules/network modules/backups modules/server modules/eks modules/database modules/github-oidc \
+  envs/dev envs/eks envs/github-ci bootstrap; do
   echo "== $dir"
   (
     cd "$dir"

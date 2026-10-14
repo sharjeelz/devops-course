@@ -1,0 +1,35 @@
+# Linkly on EKS, managed by Argo CD (module 8). Same idea as application.yaml (module 5): it deploys
+# the "deploy" branch, and the image tag CI sets in values.yaml there. On top, the EKS values: RDS,
+# HTTPS, autoscaling, and your cluster's addresses from values-eks.yaml. Change repoURL to your fork.
+#   kubectl apply -f app/linkly/gitops/application-eks.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: linkly
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/sharjeelz/devops-course.git
+    targetRevision: deploy
+    path: app/linkly/helm/linkly
+    helm:
+      valueFiles:                        # later files win
+        - values-eks.yaml                # the chart's EKS settings
+        - ../../gitops/values.yaml       # the image tag CI sets after every build
+        - ../../gitops/values-eks.yaml   # your cluster: database host, secret, domain
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: linkly
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: api
+      jsonPointers:
+        - /spec/replicas     # the HPA owns it

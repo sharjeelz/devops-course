@@ -72,4 +72,10 @@ render --set image.tag=t --set gateway.enabled=true
 check "no tls: the Gateway is plain HTTP as before" bash -c "! grep -q 'port: 443' <<<\"\$1\"" _ "$(doc Gateway linkly)"
 check "no tls: no redirect route" lacks HTTPRoute linkly-redirect
 
+# 5. What Argo CD renders on EKS (application-eks.yaml's value files, in its order).
+gitops="$chart/../../gitops"
+render -f "$chart/values-eks.yaml" -f "$gitops/values.yaml" -f "$gitops/values-eks.yaml"
+check "argo on eks: renders with the deploy branch's tag" in_doc Deployment api "image: ghcr.io/.*/linkly-api:sha-"
+check "argo on eks: RDS, autoscaling and HTTPS together" bash -c '[ -n "$1" ] && [ -n "$2" ] && [ -n "$3" ]' _   "$(doc ExternalSecret linkly-db)" "$(doc HorizontalPodAutoscaler api)" "$(doc HTTPRoute linkly-redirect)"
+
 if [ "$fails" -eq 0 ]; then echo "all chart tests passed"; else echo "$fails chart test(s) failed"; exit 1; fi

@@ -1,0 +1,11 @@
+# Your EKS environment's addresses (module 8), for application-eks.yaml. Fill them in from
+#   cd app/linkly/terraform/envs/eks && terraform output
+# and your domain, commit to main, and the next deploy carries them. None of these are secrets:
+# the database password stays in AWS Secrets Manager.
+baseUrl: https://linkly.example.com
+externalDatabase:
+  host: linkly-course-eks.REPLACE.eu-central-1.rds.amazonaws.com        # terraform output -raw db_host
+  externalSecret:
+    remoteKey: arn:aws:secretsmanager:eu-central-1:123456789012:secret:REPLACE   # terraform output -raw db_secret_arn
+gateway:
+  hostname: linkly.example.com     # a name you control, pointing at the load balancer (lesson 5)

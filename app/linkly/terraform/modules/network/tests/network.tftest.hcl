@@ -39,3 +39,43 @@ run "routes_everything_else_to_the_internet_gateway" {
     error_message = "both subnets must use the public route table"
   }
 }
+
+run "no_private_subnets_unless_asked" {
+  command = plan
+  assert {
+    condition     = length(aws_subnet.private) == 0
+    error_message = "Module 7's environment has no private subnets"
+  }
+}
+
+run "private_subnets_have_no_way_out" {
+  command = apply
+  variables {
+    private_subnets    = true
+    public_subnet_tags = { "kubernetes.io/role/elb" = "1" }
+  }
+  assert {
+    condition     = length(aws_subnet.private) == 2 && aws_subnet.private[0].availability_zone != aws_subnet.private[1].availability_zone
+    error_message = "two private subnets in different zones (RDS needs two)"
+  }
+  assert {
+    condition     = [for s in aws_subnet.private : s.cidr_block] == ["10.0.101.0/24", "10.0.102.0/24"]
+    error_message = "unexpected private subnet ranges"
+  }
+  assert {
+    condition     = alltrue([for s in aws_subnet.private : !s.map_public_ip_on_launch])
+    error_message = "private subnets must not hand out public IPs"
+  }
+  assert {
+    condition     = length(aws_route_table.private[0].route) == 0
+    error_message = "private subnets must have no route to the internet"
+  }
+  assert {
+    condition     = alltrue([for s in aws_subnet.public : s.tags["kubernetes.io/role/elb"] == "1"])
+    error_message = "public subnets must carry the tag Kubernetes uses to place internet load balancers"
+  }
+  assert {
+    condition     = length(output.private_subnet_ids) == 2
+    error_message = "the private subnet IDs must be an output"
+  }
+}

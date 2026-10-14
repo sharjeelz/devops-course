@@ -22,3 +22,15 @@ variable "az_count" {
     error_message = "az_count must be 1, 2 or 3."
   }
 }
+
+variable "private_subnets" {
+  description = "Also create private subnets (one per AZ) with no route to the internet."
+  type        = bool
+  default     = false
+}
+
+variable "public_subnet_tags" {
+  description = "Extra tags for the public subnets, e.g. kubernetes.io/role/elb = 1 for EKS load balancers."
+  type        = map(string)
+  default     = {}
+}

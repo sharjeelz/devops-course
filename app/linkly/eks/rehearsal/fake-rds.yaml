@@ -1,0 +1,49 @@
+# A stand-in for RDS (kind rehearsal, module 8): a Postgres outside Linkly's namespace whose
+# password is full of characters that break a URL unless escaped, like a generated RDS password.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fake-rds
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: master
+  namespace: fake-rds
+stringData:
+  POSTGRES_USER: linkly
+  POSTGRES_PASSWORD: "p@ss:w/rd#1%+x?"
+  POSTGRES_DB: linkly
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: fake-rds
+spec:
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          envFrom:
+            - secretRef: { name: master }
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "linkly", "-d", "linkly"] }
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: fake-rds
+spec:
+  selector: { app: postgres }
+  ports:
+    - port: 5432
