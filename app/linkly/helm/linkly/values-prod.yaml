@@ -6,6 +6,9 @@ image:
   prefix: ghcr.io/sharjeelz/
   tag: ""                       # required: pin an exact build (sha-<commit> or a release like 0.2.0)
 
+postgres:
+  password: ""                  # required: pass it at install time (--set postgres.password=...), never in Git
+
 api:
   replicas: 3
 
@@ -14,4 +17,4 @@ web:
     type: ClusterIP
 
 gateway:
-  enabled: true
+  enabled: true                 # plain HTTP for now; Module 8 adds TLS with real certificates
